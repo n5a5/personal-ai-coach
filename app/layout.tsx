@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./today-overrides.css";
 import CoachNav from "./components/coach-nav";
 import MorningLaunch from "./components/morning-launch";
 import TodaysPlan from "./components/todays-plan";
