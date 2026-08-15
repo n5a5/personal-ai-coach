@@ -57,7 +57,7 @@ input, textarea { min-width: 0; }
 .signout-button { border: 1px solid #e7e5e0; background: white; border-radius: 8px; padding: 10px 12px; color: #171717; }
 .today-anchor { background: white; border: 1px solid #e7e5e0; border-radius: 16px; padding: 22px 24px; margin-bottom: 16px; }
 .today-anchor p { font-size: 20px; line-height: 1.55; margin: 10px 0 0; font-weight: 600; }
-.today-entry-row { margin-bottom: 16px; }
+.today-entry-row { display: none !important; }
 .reset-entry { display: flex; align-items: center; gap: 14px; text-decoration: none; color: white; background: #171717; border-radius: 16px; padding: 18px 20px; }
 .reset-entry-icon { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.3); border-radius: 50%; font-size: 20px; flex: 0 0 34px; }
 .reset-entry-title { font-size: 20px; font-weight: 800; line-height: 1.2; }
@@ -120,14 +120,6 @@ input, textarea { min-width: 0; }
   .plan-item { min-height: 48px; }
   .evening-nudge { align-items: stretch; flex-direction: column; }
   .evening-nudge-link { text-align: center; }
-  main > header { display: block !important; margin-bottom: 20px !important; }
-  main > header > div:first-child { margin-bottom: 16px !important; }
-  main > header > div:first-child p { font-size: 17px !important; line-height: 1.45 !important; }
-  main > header > div:nth-child(2) { display: grid !important; grid-template-columns: minmax(0, 1fr) auto !important; gap: 8px !important; align-items: stretch !important; width: 100% !important; }
-  main > header > div:nth-child(2) > button:first-child { width: 100% !important; min-width: 0 !important; border-radius: 16px !important; padding: 14px 16px !important; }
-  main > header > div:nth-child(2) > button:last-child { align-self: stretch !important; min-width: 0 !important; white-space: nowrap !important; padding: 9px 11px !important; }
-  main > section { border-radius: 16px !important; }
-  main > section > div { min-width: 0; }
   .today-page { padding: 22px 14px calc(96px + env(safe-area-inset-bottom)) !important; }
   .today-header { display: block; margin-bottom: 16px; }
   .today-title-group { padding-right: 106px; }
@@ -141,8 +133,6 @@ input, textarea { min-width: 0; }
   .signout-button { margin-top: 12px; }
   .today-anchor { padding: 18px; }
   .today-anchor p { font-size: 18px; }
-  .today-entry-row { margin-bottom: 14px; }
-  .reset-entry { border-radius: 16px; padding: 16px; }
   .today-journal-grid { grid-template-columns: 1fr; gap: 14px; }
   .today-card { min-height: 0; padding: 18px; }
   .gameify-modal { padding: 12px; }
