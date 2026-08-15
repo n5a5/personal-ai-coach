@@ -36,6 +36,19 @@ function extractText(data: any) {
     ?.join("\n") || "";
 }
 
+function buildItems(text: string) {
+  const sections = [
+    ["body", "BODY"],
+    ["mind", "MIND"],
+    ["important", "IMPORTANT"],
+    ["life", "LIFE"],
+  ] as const;
+  return sections.map(([id, heading]) => {
+    const match = text.match(new RegExp(`(?:^|\\n)\\s*(?:\\d+\\.\\s*)?${heading}\\s*[—:-]\\s*(.+?)(?=\\n\\s*(?:\\d+\\.\\s*)?(?:BODY|MIND|IMPORTANT|LIFE|LET GO OF|FIRST MOVE)\\s*[—:-]|$)`, "is"));
+    return { id, title: heading, detail: (match?.[1] || "").trim(), completed: false };
+  }).filter(item => item.detail);
+}
+
 export async function POST() {
   try {
     const supabase = await createClient();
@@ -50,23 +63,12 @@ export async function POST() {
       supabase.from("coach_messages").select("role,content,created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(24),
     ]);
 
-    const context = JSON.stringify({
-      today: new Date().toISOString().slice(0, 10),
-      profile: profile || {},
-      durable_memories: memories || [],
-      recent_daily_logs: recent || [],
-      recent_coach_history: (history || []).reverse(),
-    });
+    const context = JSON.stringify({ today: new Date().toISOString().slice(0, 10), profile: profile || {}, durable_memories: memories || [], recent_daily_logs: recent || [], recent_coach_history: (history || []).reverse() });
 
     const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${process.env.OPENAI_API_KEY}` },
-      body: JSON.stringify({
-        model: process.env.OPENAI_MODEL || "gpt-5.6",
-        instructions: MORNING_SYSTEM + "\n\nPERSISTENT USER CONTEXT:\n" + context,
-        input: [{ role: "user", content: "It is morning. Build my plan for today based on what you know about me." }],
-        max_output_tokens: 750,
-      }),
+      body: JSON.stringify({ model: process.env.OPENAI_MODEL || "gpt-5.6", instructions: MORNING_SYSTEM + "\n\nPERSISTENT USER CONTEXT:\n" + context, input: [{ role: "user", content: "It is morning. Build my plan for today based on what you know about me." }], max_output_tokens: 750 }),
     });
 
     const data = await response.json().catch(() => ({}));
@@ -77,7 +79,13 @@ export async function POST() {
 
     const text = extractText(data);
     if (!text.trim()) return Response.json({ error: "The morning coach returned no text. Please try again." }, { status: 502 });
-    return Response.json({ message: text });
+
+    const items = buildItems(text);
+    const today = new Date().toISOString().slice(0, 10);
+    const { error: planError } = await supabase.from("daily_plans").upsert({ user_id: user.id, plan_date: today, title: "Today's Plan", items, source: "morning-coach", updated_at: new Date().toISOString() }, { onConflict: "user_id,plan_date" });
+    if (planError) console.error("Daily plan save error:", planError);
+
+    return Response.json({ message: text, plan: { plan_date: today, title: "Today's Plan", items } });
   } catch (error) {
     console.error("Morning coach error:", error);
     return Response.json({ error: "The morning coach encountered an unexpected error." }, { status: 500 });
