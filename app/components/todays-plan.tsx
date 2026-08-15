@@ -14,6 +14,14 @@ const fallback: PlanItem[] = [
   { id: "growth", text: "Move one important thing forward — choose the uncomfortable action that matters.", completed: false },
 ];
 
+function localDate() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 function normalizeItems(items?: PlanItem[]) {
   return (items || []).map(item => ({
     ...item,
@@ -26,12 +34,13 @@ export default function TodaysPlan() {
   const pathname = usePathname();
   const [items, setItems] = useState<PlanItem[]>(fallback);
   const [ready, setReady] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [hasPlan, setHasPlan] = useState(false);
 
   async function loadPlan() {
     try {
-      const response = await fetch("/api/daily-plan", { cache: "no-store" });
+      const response = await fetch(`/api/daily-plan?date=${localDate()}`, { cache: "no-store" });
       if (!response.ok) return;
       const data = await response.json();
       const next = normalizeItems(data.plan?.items);
@@ -53,23 +62,30 @@ export default function TodaysPlan() {
     const current = items.find(item => item.id === id);
     if (!current) return;
     const completed = !Boolean(current.completed);
+    const previous = items;
     const next = items.map(item => item.id === id ? { ...item, completed, done: completed } : item);
     setItems(next);
-    setLoading(true);
+    setSavingId(id);
+    setSaveError(null);
+
     try {
       const response = await fetch("/api/daily-plan", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ itemId: id, completed }),
+        body: JSON.stringify({ itemId: id, completed, text: current.text, date: localDate() }),
       });
-      if (!response.ok) throw new Error("Unable to save plan item");
+      if (!response.ok) throw new Error("Unable to save");
       const data = await response.json();
       const saved = normalizeItems(data.plan?.items);
-      if (saved.length) setItems(saved);
+      if (saved.length) {
+        setItems(saved);
+        setHasPlan(true);
+      }
     } catch {
-      setItems(items);
+      setItems(previous);
+      setSaveError("Couldn't save that checkoff. Tap again to retry.");
     } finally {
-      setLoading(false);
+      setSavingId(null);
     }
   }
 
@@ -82,19 +98,30 @@ export default function TodaysPlan() {
         <div>
           <div className="eyebrow">Today's plan</div>
           <h2>{hasPlan ? "Do the few things that matter." : "Start with what matters."}</h2>
-          <p>{completed} of {items.length} complete{loading ? " · Saving…" : ""}</p>
+          <p>{completed} of {items.length} complete{savingId ? " · Saving…" : ""}</p>
         </div>
         <Link href="/morning" className="plan-morning-link">{hasPlan ? "Rebuild with Morning Coach →" : "Build with Morning Coach →"}</Link>
       </div>
       <div className="plan-progress"><span style={{ width: `${items.length ? completed / items.length * 100 : 0}%` }} /></div>
+      {saveError && <button type="button" className="plan-save-error" onClick={() => setSaveError(null)}>{saveError}</button>}
       <div className="plan-items">
         {items.map(item => (
-          <button key={item.id} type="button" onClick={() => toggle(item.id)} className={`plan-item ${item.completed ? "done" : ""}`} disabled={loading}>
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => toggle(item.id)}
+            className={`plan-item ${item.completed ? "done" : ""}`}
+            disabled={savingId !== null}
+            aria-pressed={Boolean(item.completed)}
+          >
             <span className="plan-check" aria-hidden="true">{item.completed ? "✓" : ""}</span>
             <span>{item.text}</span>
           </button>
         ))}
       </div>
+      {completed === items.length && items.length > 0 && (
+        <div className="plan-complete-message">Day moved forward. Nice work.</div>
+      )}
     </section>
   );
 }
