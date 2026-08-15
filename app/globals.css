@@ -27,6 +27,30 @@ input, textarea { min-width: 0; }
 .plan-item.done span:last-child { text-decoration: line-through; }
 .plan-item.done .plan-check { background: white; color: #171717; border-color: white; }
 
+.reference-page { min-height: 100vh; padding: 22px 18px 90px; }
+.reference-wrap { max-width: 900px; margin: 0 auto; }
+.back-link { color: #171717; text-decoration: none; font-weight: 700; display: inline-flex; align-items: center; min-height: 44px; }
+.reference-header { padding: 28px 0 34px; }
+.reference-header h1 { font-size: clamp(38px, 7vw, 64px); line-height: .98; letter-spacing: -2px; margin: 8px 0 16px; max-width: 760px; }
+.reference-header p { font-size: 19px; line-height: 1.5; color: #666; max-width: 720px; margin: 0; }
+.eyebrow { font-size: 12px; font-weight: 800; letter-spacing: 1.8px; color: #777; }
+.reference-section { margin-top: 20px; background: white; border-radius: 24px; padding: 28px; }
+.reference-section h2 { font-size: clamp(27px, 5vw, 40px); line-height: 1.08; margin: 8px 0 10px; letter-spacing: -1px; }
+.section-intro { color: #666; font-size: 16px; line-height: 1.55; margin: 0 0 20px; }
+.reference-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; }
+.reference-card { border: 1px solid #e3e3e3; border-radius: 17px; padding: 18px; position: relative; }
+.reference-number { width: 30px; height: 30px; border-radius: 50%; background: #171717; color: white; display: grid; place-items: center; font-weight: 800; font-size: 13px; margin-bottom: 12px; }
+.reference-card h3, .reference-row h3 { margin: 0 0 7px; font-size: 19px; }
+.reference-card p, .reference-row p { margin: 0; color: #5f5f5f; line-height: 1.55; font-size: 15px; }
+.reference-list { display: grid; gap: 0; }
+.reference-row { padding: 18px 0; border-bottom: 1px solid #e8e8e8; }
+.reference-row:last-child { border-bottom: 0; padding-bottom: 0; }
+.question-list { display: grid; gap: 9px; }
+.question-list div { padding: 15px 16px; background: #f5f3ef; border-radius: 13px; font-weight: 700; line-height: 1.4; }
+.reminder-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
+.reminder { padding: 17px; border: 1px solid #e2e2e2; border-radius: 15px; font-size: 16px; line-height: 1.45; font-weight: 700; }
+.reference-footer { margin: 18px 0 0; padding: 20px; background: #171717; color: white; border-radius: 20px; line-height: 1.5; }
+
 @media (max-width: 640px) {
   body { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
   main { width: 100% !important; max-width: 100% !important; padding: 22px 14px calc(92px + env(safe-area-inset-bottom)) !important; }
@@ -34,28 +58,23 @@ input, textarea { min-width: 0; }
   h2 { line-height: 1.18 !important; }
   textarea { max-width: 100%; }
   button, a { min-height: 44px; }
-
   .todays-plan { margin: 10px 14px 0; padding: 17px; border-radius: 18px; }
   .todays-plan-head { display: block; }
   .todays-plan h2 { font-size: 21px; }
   .plan-morning-link { display: inline-flex; margin-top: 12px; min-height: 44px; align-items: center; }
   .plan-item { min-height: 48px; }
-
   main > header { display: block !important; margin-bottom: 20px !important; }
   main > header > div:first-child { margin-bottom: 16px !important; }
   main > header > div:first-child p { font-size: 17px !important; line-height: 1.35 !important; }
   main > header > div:nth-child(2) { display: grid !important; grid-template-columns: minmax(0, 1fr) auto !important; gap: 8px !important; align-items: stretch !important; width: 100% !important; }
   main > header > div:nth-child(2) > button:first-child { width: 100% !important; min-width: 0 !important; border-radius: 16px !important; padding: 14px 16px !important; }
   main > header > div:nth-child(2) > button:last-child { align-self: stretch !important; min-width: 0 !important; white-space: nowrap !important; padding: 9px 11px !important; }
-
   main > section { border-radius: 18px !important; }
   main > section:not(:first-of-type) { margin-top: 14px !important; }
   main > section > div { min-width: 0; }
   main > section:nth-of-type(2) button { min-height: 132px !important; }
-
   [role="dialog"] { padding: 12px !important; }
   [role="dialog"] > div { max-width: none !important; width: 100% !important; max-height: calc(100vh - 24px) !important; border-radius: 20px !important; padding: 20px !important; }
-
   .coach-page { padding-bottom: calc(96px + env(safe-area-inset-bottom)) !important; }
   .coach-page-header { align-items: stretch !important; }
   .coach-page-header > div { min-width: 0; }
@@ -70,9 +89,17 @@ input, textarea { min-width: 0; }
   .coach-input { position: sticky; bottom: calc(76px + env(safe-area-inset-bottom)); z-index: 50; background: #f5f3ef; padding: 8px 0 4px; }
   .coach-input input { min-height: 52px; }
   .coach-input button { min-width: 82px; }
-
   .coach-nav { position: fixed; z-index: 100; left: 0; right: 0; bottom: 0; max-width: none; padding: 8px 8px calc(8px + env(safe-area-inset-bottom)); background: rgba(255,255,255,.97); border-top: 1px solid #ddd; box-shadow: 0 -6px 20px rgba(0,0,0,.08); justify-content: space-around; gap: 4px; }
   .coach-nav a { flex: 1 1 0; min-width: 0; min-height: 52px; justify-content: center; flex-direction: column; gap: 2px; border: 0; border-radius: 12px; background: transparent; padding: 5px 3px; font-size: 11px; line-height: 1.1; }
   .coach-nav a.active { background: #171717; color: white; }
   .nav-icon { display: block; font-size: 17px; line-height: 17px; }
+  .reference-page { padding: 18px 14px calc(96px + env(safe-area-inset-bottom)) !important; }
+  .reference-header { padding: 20px 0 22px; }
+  .reference-header h1 { font-size: 39px !important; letter-spacing: -1.2px; }
+  .reference-header p { font-size: 17px; }
+  .reference-section { padding: 20px 16px; border-radius: 19px; }
+  .reference-grid, .reminder-grid { grid-template-columns: 1fr; }
+  .reference-card { padding: 16px; }
+  .reference-card h3, .reference-row h3 { font-size: 18px; }
+  .reference-card p, .reference-row p { font-size: 15px; }
 }
