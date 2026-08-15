@@ -1,7 +1,7 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; min-height: 100%; }
 html { -webkit-text-size-adjust: 100%; }
-body { background: #f5f3ef; color: #171717; font-family: Arial, Helvetica, sans-serif; padding-bottom: env(safe-area-inset-bottom); }
+body { background: #f5f3ef; color: #171717; font-family: Arial, Helvetica, sans-serif; padding-bottom: env(safe-area-inset-bottom); overflow-x: hidden; }
 button, input, textarea { font: inherit; }
 button { cursor: pointer; }
 button, a { -webkit-tap-highlight-color: transparent; }
@@ -14,13 +14,33 @@ input, textarea { min-width: 0; }
 
 @media (max-width: 640px) {
   body { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
-  main { width: 100% !important; max-width: 100% !important; padding-left: 14px !important; padding-right: 14px !important; }
-  h1 { font-size: 32px !important; line-height: 1.12; }
-  h2 { line-height: 1.2; }
+  main { width: 100% !important; max-width: 100% !important; padding: 22px 14px calc(92px + env(safe-area-inset-bottom)) !important; }
+  h1 { font-size: 32px !important; line-height: 1.08 !important; letter-spacing: -0.7px; }
+  h2 { line-height: 1.18 !important; }
   textarea { max-width: 100%; }
   button, a { min-height: 44px; }
-  .coach-nav { position: fixed; z-index: 100; left: 0; right: 0; bottom: 0; max-width: none; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); background: rgba(255,255,255,.96); border-top: 1px solid #ddd; box-shadow: 0 -6px 20px rgba(0,0,0,.08); justify-content: space-around; gap: 8px; }
-  .coach-nav a { flex: 1; min-height: 52px; justify-content: center; flex-direction: column; gap: 2px; border: 0; border-radius: 12px; background: transparent; padding: 5px 8px; font-size: 11px; }
+
+  /* True mobile-first header: title first, score second, sign-out compact. */
+  main > header { display: block !important; margin-bottom: 20px !important; }
+  main > header > div:first-child { margin-bottom: 16px !important; }
+  main > header > div:first-child p { font-size: 17px !important; line-height: 1.35 !important; }
+  main > header > div:nth-child(2) { display: grid !important; grid-template-columns: minmax(0, 1fr) auto !important; gap: 8px !important; align-items: stretch !important; width: 100% !important; }
+  main > header > div:nth-child(2) > button:first-child { width: 100% !important; min-width: 0 !important; border-radius: 16px !important; padding: 14px 16px !important; }
+  main > header > div:nth-child(2) > button:last-child { align-self: stretch !important; min-width: 0 !important; white-space: nowrap !important; padding: 9px 11px !important; }
+
+  /* Give dashboard cards breathing room without wasting vertical space. */
+  main > section { border-radius: 18px !important; }
+  main > section:not(:first-of-type) { margin-top: 14px !important; }
+  main > section > div { min-width: 0; }
+  main > section:nth-of-type(2) button { min-height: 132px !important; }
+
+  /* Gameify / reset dialogs use the full phone width with comfortable edges. */
+  [role="dialog"] { padding: 12px !important; }
+  [role="dialog"] > div { max-width: none !important; width: 100% !important; max-height: calc(100vh - 24px) !important; border-radius: 20px !important; padding: 20px !important; }
+
+  /* Fixed bottom navigation: no horizontal page scrolling and no clipped Profile tab. */
+  .coach-nav { position: fixed; z-index: 100; left: 0; right: 0; bottom: 0; max-width: none; padding: 8px 8px calc(8px + env(safe-area-inset-bottom)); background: rgba(255,255,255,.97); border-top: 1px solid #ddd; box-shadow: 0 -6px 20px rgba(0,0,0,.08); justify-content: space-around; gap: 4px; }
+  .coach-nav a { flex: 1 1 0; min-width: 0; min-height: 52px; justify-content: center; flex-direction: column; gap: 2px; border: 0; border-radius: 12px; background: transparent; padding: 5px 3px; font-size: 11px; line-height: 1.1; }
   .coach-nav a.active { background: #171717; color: white; }
-  .nav-icon { display: block; font-size: 18px; line-height: 18px; }
+  .nav-icon { display: block; font-size: 17px; line-height: 17px; }
 }
