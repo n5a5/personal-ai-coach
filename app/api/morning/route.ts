@@ -1,11 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 
-const MORNING_SYSTEM = `You are the user's morning coach. Build a realistic, energizing plan for TODAY using the user's long-term profile, durable memories, recent daily logs, recent coaching history, and recent daily-plan completion history.
+const MORNING_SYSTEM = `You are the user's morning coach. Build a realistic, energizing plan for TODAY using the user's long-term profile, durable memories, recent daily logs, recent evening reflections, recent coaching history, and recent daily-plan completion history.
 
 The purpose is not maximum productivity. The purpose is to make today a genuinely good day while moving the user's life forward.
 
 Priorities:
 - Start with the person's current state, not an idealized schedule.
+- Use the previous evening reflection as behavioral feedback. If the user identified a lesson, let-go item, or priority, carry it forward naturally when relevant.
 - Keep the plan small: one BODY action, one MIND action, one IMPORTANT action, and one RELATIONSHIP/LIFE action.
 - Use recent completion history as behavioral feedback. Notice patterns without judging them. If the user repeatedly completes some categories and misses another, make that category easier, more concrete, or more realistic rather than simply repeating the same instruction.
 - If yesterday was incomplete, do not frame it as failure. Extract one useful lesson and adjust today's plan.
@@ -82,7 +83,7 @@ export async function POST(request: Request) {
 
     const [{ data: profile }, { data: recent }, { data: memories }, { data: history }, { data: recentPlans }, { data: existingToday }] = await Promise.all([
       supabase.from("profiles").select("display_name,values,vision,goals,motivations,challenges,coaching_style,identity_statement").eq("id", user.id).maybeSingle(),
-      supabase.from("daily_logs").select("log_date,mood,energy,gratitude,focus,controllable,uncontrollable,intention").eq("user_id", user.id).order("log_date", { ascending: false }).limit(7),
+      supabase.from("daily_logs").select("log_date,mood,energy,gratitude,focus,controllable,uncontrollable,intention,evening_win,evening_lesson,evening_let_go,evening_note,evening_completed").eq("user_id", user.id).order("log_date", { ascending: false }).limit(7),
       supabase.from("coach_memories").select("category,content,importance,updated_at").eq("user_id", user.id).order("importance", { ascending: false }).order("updated_at", { ascending: false }).limit(40),
       supabase.from("coach_messages").select("role,content,created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(24),
       supabase.from("daily_plans").select("plan_date,title,items,source,updated_at").eq("user_id", user.id).order("plan_date", { ascending: false }).limit(7),
@@ -101,7 +102,7 @@ export async function POST(request: Request) {
     const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${process.env.OPENAI_API_KEY}` },
-      body: JSON.stringify({ model: process.env.OPENAI_MODEL || "gpt-5.6", instructions: MORNING_SYSTEM + "\\n\\nPERSISTENT USER CONTEXT:\\n" + context, input: [{ role: "user", content: "It is morning. Build my plan for today based on what you know about me, including what I actually followed through on recently." }], max_output_tokens: 750 }),
+      body: JSON.stringify({ model: process.env.OPENAI_MODEL || "gpt-5.6", instructions: MORNING_SYSTEM + "\\n\\nPERSISTENT USER CONTEXT:\\n" + context, input: [{ role: "user", content: "It is morning. Build my plan for today based on what you know about me, including what I learned and actually followed through on recently." }], max_output_tokens: 750 }),
     });
 
     const data = await response.json().catch(() => ({}));
