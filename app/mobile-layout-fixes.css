@@ -1,0 +1,44 @@
+/* Mobile layout fixes: keep Momentum visible, prevent overflow, move Sign out below the Today content. */
+@media (max-width: 640px) {
+  .today-page {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 150px;
+    grid-template-areas:
+      "title momentum"
+      "anchor anchor"
+      "journal journal"
+      "signout signout";
+    column-gap: 12px;
+    row-gap: 16px;
+  }
+
+  .today-header { display: contents; }
+  .today-title-group { grid-area: title; min-width: 0; align-self: start; }
+  .today-actions { display: contents; }
+
+  .momentum-tile {
+    grid-area: momentum;
+    width: 150px;
+    min-width: 0;
+    max-width: 150px;
+    overflow: hidden;
+    align-self: start;
+    padding: 12px;
+  }
+
+  .momentum-label,
+  .momentum-points,
+  .momentum-sub { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+  .momentum-points { white-space: nowrap; }
+  .momentum-sub { white-space: normal; line-height: 1.35; }
+
+  .today-anchor { grid-area: anchor; width: 100%; margin-bottom: 0; }
+  .today-journal-grid { grid-area: journal; width: 100%; }
+  .signout-button {
+    grid-area: signout;
+    justify-self: start;
+    margin-top: 0;
+  }
+
+  .gameify-modal { grid-area: auto; }
+}
