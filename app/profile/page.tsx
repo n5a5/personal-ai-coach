@@ -26,6 +26,12 @@ const fields = [
 
 type Profile = Record<(typeof fields)[number][0], string>;
 
+const backupTables = [
+  "profiles", "goals", "daily_logs", "habits", "habit_completions", "rewards", "point_transactions",
+  "anxiety_sessions", "coach_messages", "gameify_rules", "reward_redemptions", "gameify_events",
+  "coach_memories", "daily_plans", "daily_plan_completions", "identity_loops",
+] as const;
+
 export default function ProfilePage() {
   const supabase = createClient();
   const router = useRouter();
@@ -33,6 +39,7 @@ export default function ProfilePage() {
   const [displayName, setDisplayName] = useState("Neil");
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(true);
+  const [backupBusy, setBackupBusy] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -64,6 +71,38 @@ export default function ProfilePage() {
     setStatus(error ? error.message : "Saved. Your coach can use this context.");
   }
 
+  async function downloadBackup() {
+    setBackupBusy(true);
+    setStatus("Creating your backup…");
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return router.replace("/login");
+
+    const results = await Promise.all(backupTables.map(async (table) => {
+      const { data, error } = await supabase.from(table).select("*");
+      return [table, error ? { error: error.message } : (data || [])] as const;
+    }));
+
+    const backup = {
+      backup_version: 1,
+      created_at: new Date().toISOString(),
+      user_id: user.id,
+      note: "Personal AI Coach data export. Authentication passwords/tokens and Supabase internal tables are intentionally excluded.",
+      tables: Object.fromEntries(results),
+    };
+
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `personal-ai-coach-backup-${new Date().toISOString().slice(0,10)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    setStatus("Backup downloaded. Store it somewhere separate from the app.");
+    setBackupBusy(false);
+  }
+
   if (loading) return <main style={{padding:40}}>Loading your profile…</main>;
 
   return <main style={{maxWidth:850,margin:"0 auto",padding:"32px 20px 70px"}}>
@@ -77,5 +116,12 @@ export default function ProfilePage() {
     {fields.map(([key,title,help]) => <section key={key} style={{background:"white",borderRadius:20,padding:24,marginTop:12}}><label style={{display:"block",fontWeight:700,fontSize:19}}>{title}</label><div style={{fontSize:14,opacity:.6,margin:"6px 0 10px"}}>{help}</div><textarea value={profile[key]} onChange={e=>setProfile(p=>({...p,[key]:e.target.value}))} style={{width:"100%",minHeight:130,padding:12,border:"1px solid #ddd",borderRadius:10,resize:"vertical"}}/></section>)}
     <button onClick={save} style={{marginTop:18,width:"100%",border:0,borderRadius:12,padding:15,background:"#171717",color:"white",fontWeight:700}}>Save my coach profile</button>
     {status && <div style={{marginTop:12,textAlign:"center",opacity:.7}}>{status}</div>}
+
+    <section style={{background:"white",borderRadius:20,padding:24,marginTop:28,border:"1px solid #e5e5e5"}}>
+      <div style={{fontSize:13,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",opacity:.55}}>Backup</div>
+      <h2 style={{fontSize:24,margin:"8px 0"}}>Protect your coach.</h2>
+      <p style={{margin:"0 0 14px",lineHeight:1.5,opacity:.7}}>Download your profile, journal, coaching history, points, plans, identity loops and other personal coach data as a private JSON backup. Passwords and authentication tokens are never included.</p>
+      <button onClick={downloadBackup} disabled={backupBusy} style={{width:"100%",border:"1px solid #ccc",borderRadius:12,padding:14,background:"#f7f7f5",fontWeight:700,cursor:backupBusy?"wait":"pointer"}}>{backupBusy ? "Creating backup…" : "Download my backup"}</button>
+    </section>
   </main>;
 }
