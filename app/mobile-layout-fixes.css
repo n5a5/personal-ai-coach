@@ -1,4 +1,5 @@
 /* Mobile layout fixes: keep Momentum visible, prevent overflow, move Sign out below the Today content. */
+/* Production trigger: 2026-08-15 */
 @media (max-width: 640px) {
   .today-page {
     display: grid;
