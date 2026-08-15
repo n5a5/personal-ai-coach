@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import IdentityLoop from "@/app/components/identity-loop";
 
 function localDate() {
   const now = new Date();
@@ -46,7 +47,9 @@ export default function MorningPage() {
         <p style={{ fontSize: 18, opacity: .68, margin: 0 }}>Let's make today a good day—not just a productive one.</p>
       </header>
 
-      <section style={card}>
+      <IdentityLoop />
+
+      <section style={{ ...card, marginTop: 16 }}>
         {loading ? (
           <div style={{ padding: "36px 8px", textAlign: "center" }}>
             <div style={eyebrow}>YOUR COACH IS THINKING</div>
