@@ -12,7 +12,7 @@ input, textarea { min-width: 0; }
 .coach-nav a.active { color: white; background: #171717; }
 .nav-icon { display: none; }
 
-.todays-plan { max-width: 980px; margin: 12px auto 0; padding: 20px; background: #171717; color: white; border-radius: 20px; box-shadow: 0 8px 24px rgba(0,0,0,.12); }
+.todays-plan { max-width: 940px; margin: 12px auto 0; padding: 20px; background: #171717; color: white; border-radius: 20px; box-shadow: 0 8px 24px rgba(0,0,0,.12); }
 .todays-plan-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; }
 .todays-plan .eyebrow { font-size: 12px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; opacity: .62; }
 .todays-plan h2 { margin: 5px 0 3px; font-size: 24px; line-height: 1.15; }
@@ -68,7 +68,7 @@ input, textarea { min-width: 0; }
   h2 { line-height: 1.18 !important; }
   textarea { max-width: 100%; }
   button, a { min-height: 44px; }
-  .todays-plan { margin: 10px 14px 0; padding: 17px; border-radius: 18px; }
+  .todays-plan { margin: 10px 14px 0; padding: 17px; border-radius: 18px; max-width: calc(100% - 28px); }
   .todays-plan-head { display: block; }
   .todays-plan h2 { font-size: 21px; }
   .plan-morning-link { display: inline-flex; margin-top: 12px; min-height: 44px; align-items: center; }
