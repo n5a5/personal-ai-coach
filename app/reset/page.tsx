@@ -82,7 +82,7 @@ export default function ResetPage() {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10, marginTop: 18 }}>
               {emotions.map((item, i) => (
                 <button key={item.name} onClick={() => setEmotion(i)} style={{ textAlign: "left", border: emotion === i ? "2px solid #171717" : "1px solid #ddd", borderRadius: 14, padding: 13, background: emotion === i ? "#f1efea" : "white", cursor: "pointer" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}><span style={{ width: 20, height: 20, display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: 99, background: "#171717", color: "white", fontSize: 11, fontWeight: 800 }}>{i + 1}</span><strong style={{ fontSize: 14 }}>{item.name}</strong></div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}><span style={{ width: 20, minWidth: 20, height: 20, minHeight: 20, flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: 99, background: "#171717", color: "white", fontSize: 11, lineHeight: 1, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{i + 1}</span><strong style={{ fontSize: 14, lineHeight: 1.2 }}>{item.name}</strong></div>
                   <div style={{ marginTop: 8, fontSize: 12, lineHeight: 1.45, opacity: .72 }}>{item.body}</div>
                 </button>
               ))}
