@@ -3,6 +3,7 @@ import "./globals.css";
 import CoachNav from "./components/coach-nav";
 import MorningLaunch from "./components/morning-launch";
 import TodaysPlan from "./components/todays-plan";
+import RemoveAnxiousCard from "./components/remove-anxious-card";
 
 export const metadata: Metadata = {
   title: "Personal AI Coach",
@@ -16,6 +17,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <CoachNav />
         <MorningLaunch />
         <TodaysPlan />
+        <RemoveAnxiousCard />
         {children}
       </body>
     </html>
