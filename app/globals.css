@@ -12,6 +12,21 @@ input, textarea { min-width: 0; }
 .coach-nav a.active { color: white; background: #171717; }
 .nav-icon { display: none; }
 
+.todays-plan { max-width: 980px; margin: 12px auto 0; padding: 20px; background: #171717; color: white; border-radius: 20px; box-shadow: 0 8px 24px rgba(0,0,0,.12); }
+.todays-plan-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; }
+.todays-plan .eyebrow { font-size: 12px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; opacity: .62; }
+.todays-plan h2 { margin: 5px 0 3px; font-size: 24px; line-height: 1.15; }
+.todays-plan p { margin: 0; font-size: 13px; opacity: .62; }
+.plan-morning-link { color: white; text-decoration: none; border: 1px solid rgba(255,255,255,.22); border-radius: 10px; padding: 10px 12px; font-size: 13px; font-weight: 700; white-space: nowrap; }
+.plan-progress { height: 5px; background: rgba(255,255,255,.13); border-radius: 99px; overflow: hidden; margin: 16px 0 10px; }
+.plan-progress span { display: block; height: 100%; background: white; border-radius: inherit; transition: width .2s ease; }
+.plan-items { display: grid; gap: 7px; }
+.plan-item { width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; color: white; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.09); border-radius: 12px; padding: 11px 12px; font-size: 14px; line-height: 1.35; }
+.plan-check { width: 23px; height: 23px; flex: 0 0 23px; border: 1px solid rgba(255,255,255,.35); border-radius: 50%; display: grid; place-items: center; font-size: 13px; }
+.plan-item.done { opacity: .58; }
+.plan-item.done span:last-child { text-decoration: line-through; }
+.plan-item.done .plan-check { background: white; color: #171717; border-color: white; }
+
 @media (max-width: 640px) {
   body { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
   main { width: 100% !important; max-width: 100% !important; padding: 22px 14px calc(92px + env(safe-area-inset-bottom)) !important; }
@@ -19,6 +34,12 @@ input, textarea { min-width: 0; }
   h2 { line-height: 1.18 !important; }
   textarea { max-width: 100%; }
   button, a { min-height: 44px; }
+
+  .todays-plan { margin: 10px 14px 0; padding: 17px; border-radius: 18px; }
+  .todays-plan-head { display: block; }
+  .todays-plan h2 { font-size: 21px; }
+  .plan-morning-link { display: inline-flex; margin-top: 12px; min-height: 44px; align-items: center; }
+  .plan-item { min-height: 48px; }
 
   main > header { display: block !important; margin-bottom: 20px !important; }
   main > header > div:first-child { margin-bottom: 16px !important; }
