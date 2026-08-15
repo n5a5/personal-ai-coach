@@ -1,12 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
 
-const MORNING_SYSTEM = `You are the user's morning coach. Build a realistic, energizing plan for TODAY using the user's long-term profile, durable memories, recent daily logs, and recent coaching history.
+const MORNING_SYSTEM = `You are the user's morning coach. Build a realistic, energizing plan for TODAY using the user's long-term profile, durable memories, recent daily logs, recent coaching history, and recent daily-plan completion history.
 
 The purpose is not maximum productivity. The purpose is to make today a genuinely good day while moving the user's life forward.
 
 Priorities:
 - Start with the person's current state, not an idealized schedule.
 - Keep the plan small: one BODY action, one MIND action, one IMPORTANT action, and one RELATIONSHIP/LIFE action.
+- Use recent completion history as behavioral feedback. Notice patterns without judging them. If the user repeatedly completes some categories and misses another, make that category easier, more concrete, or more realistic rather than simply repeating the same instruction.
+- If yesterday was incomplete, do not frame it as failure. Extract one useful lesson and adjust today's plan.
 - If the user is under unusual stress, explicitly prevent the stressful issue from consuming the whole day. Separate what can be handled today from what cannot.
 - Include the user's recurring anchor when appropriate: "I am doing everything I can. I can control what I do today, and I don't need to solve tomorrow today."
 - Encourage exercise, meditation/quiet time, gratitude, family connection, music, novelty, enjoyment, and focused work when appropriate.
@@ -49,26 +51,57 @@ function buildItems(text: string) {
   }).filter(item => item.detail);
 }
 
-export async function POST() {
+function completionSummary(plans: any[]) {
+  return plans.map(plan => {
+    const items = Array.isArray(plan.items) ? plan.items : [];
+    const completed = items.filter((item: any) => Boolean(item?.completed ?? item?.done)).length;
+    return {
+      date: plan.plan_date,
+      completed,
+      total: items.length,
+      percent: items.length ? Math.round((completed / items.length) * 100) : 0,
+      items: items.map((item: any) => ({
+        category: item?.id,
+        completed: Boolean(item?.completed ?? item?.done),
+        text: item?.detail || item?.text || item?.title || "",
+      })),
+    };
+  });
+}
+
+export async function POST(request: Request) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
     if (!process.env.OPENAI_API_KEY) return Response.json({ setup: true });
 
-    const [{ data: profile }, { data: recent }, { data: memories }, { data: history }] = await Promise.all([
+    const body = await request.json().catch(() => ({}));
+    const requestedDate = typeof body?.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.date) ? body.date : null;
+    const today = requestedDate || new Date().toISOString().slice(0, 10);
+
+    const [{ data: profile }, { data: recent }, { data: memories }, { data: history }, { data: recentPlans }, { data: existingToday }] = await Promise.all([
       supabase.from("profiles").select("display_name,values,vision,goals,motivations,challenges,coaching_style,identity_statement").eq("id", user.id).maybeSingle(),
       supabase.from("daily_logs").select("log_date,mood,energy,gratitude,focus,controllable,uncontrollable,intention").eq("user_id", user.id).order("log_date", { ascending: false }).limit(7),
       supabase.from("coach_memories").select("category,content,importance,updated_at").eq("user_id", user.id).order("importance", { ascending: false }).order("updated_at", { ascending: false }).limit(40),
       supabase.from("coach_messages").select("role,content,created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(24),
+      supabase.from("daily_plans").select("plan_date,title,items,source,updated_at").eq("user_id", user.id).order("plan_date", { ascending: false }).limit(7),
+      supabase.from("daily_plans").select("id,items").eq("user_id", user.id).eq("plan_date", today).maybeSingle(),
     ]);
 
-    const context = JSON.stringify({ today: new Date().toISOString().slice(0, 10), profile: profile || {}, durable_memories: memories || [], recent_daily_logs: recent || [], recent_coach_history: (history || []).reverse() });
+    const context = JSON.stringify({
+      today,
+      profile: profile || {},
+      durable_memories: memories || [],
+      recent_daily_logs: recent || [],
+      recent_coach_history: (history || []).reverse(),
+      recent_daily_plan_completion: completionSummary(recentPlans || []),
+    });
 
     const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${process.env.OPENAI_API_KEY}` },
-      body: JSON.stringify({ model: process.env.OPENAI_MODEL || "gpt-5.6", instructions: MORNING_SYSTEM + "\n\nPERSISTENT USER CONTEXT:\n" + context, input: [{ role: "user", content: "It is morning. Build my plan for today based on what you know about me." }], max_output_tokens: 750 }),
+      body: JSON.stringify({ model: process.env.OPENAI_MODEL || "gpt-5.6", instructions: MORNING_SYSTEM + "\\n\\nPERSISTENT USER CONTEXT:\\n" + context, input: [{ role: "user", content: "It is morning. Build my plan for today based on what you know about me, including what I actually followed through on recently." }], max_output_tokens: 750 }),
     });
 
     const data = await response.json().catch(() => ({}));
@@ -80,9 +113,21 @@ export async function POST() {
     const text = extractText(data);
     if (!text.trim()) return Response.json({ error: "The morning coach returned no text. Please try again." }, { status: 502 });
 
-    const items = buildItems(text);
-    const today = new Date().toISOString().slice(0, 10);
-    const { error: planError } = await supabase.from("daily_plans").upsert({ user_id: user.id, plan_date: today, title: "Today's Plan", items, source: "morning-coach", updated_at: new Date().toISOString() }, { onConflict: "user_id,plan_date" });
+    const generatedItems = buildItems(text);
+    const previousItems = Array.isArray(existingToday?.items) ? existingToday.items : [];
+    const items = generatedItems.map(item => {
+      const previous = previousItems.find((old: any) => old?.id === item.id);
+      return previous ? { ...item, completed: Boolean(previous.completed ?? previous.done) } : item;
+    });
+
+    const { error: planError } = await supabase.from("daily_plans").upsert({
+      user_id: user.id,
+      plan_date: today,
+      title: "Today's Plan",
+      items,
+      source: "morning-coach",
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "user_id,plan_date" });
     if (planError) console.error("Daily plan save error:", planError);
 
     return Response.json({ message: text, plan: { plan_date: today, title: "Today's Plan", items } });
