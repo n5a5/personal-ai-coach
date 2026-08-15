@@ -29,6 +29,10 @@ export default function Home() {
   const [earned, setEarned] = useState<string[]>([]);
   const [rules, setRules] = useState<Record<string, string>>({});
   const [message, setMessage] = useState("");
+  const [checkInSaved, setCheckInSaved] = useState(false);
+  const [gratitudeSaved, setGratitudeSaved] = useState(false);
+  const [savingCheckIn, setSavingCheckIn] = useState(false);
+  const [savingGratitude, setSavingGratitude] = useState(false);
 
   const level = useMemo(() => Math.floor(points / 25) + 1, [points]);
   const progress = (Math.max(0, points) % 25) / 25 * 100;
@@ -40,7 +44,7 @@ export default function Home() {
       const today = new Date().toISOString().slice(0, 10);
       const [{ data: log }, { data: txs }, { data: ruleRows }, { data: events }] = await Promise.all([
         supabase.from("daily_logs").select("mood, gratitude").eq("user_id", userData.user.id).eq("log_date", today).maybeSingle(),
-        supabase.from("point_transactions").select("amount").eq("user_id", userData.user.id),
+        supabase.from("point_transactions").select("amount, reason").eq("user_id", userData.user.id),
         supabase.from("gameify_rules").select("id,name").eq("user_id", userData.user.id).eq("active", true),
         supabase.from("gameify_events").select("rule_id").eq("user_id", userData.user.id).eq("event_date", today),
       ]);
@@ -48,17 +52,61 @@ export default function Home() {
       setPoints((txs || []).reduce((sum, row) => sum + row.amount, 0));
       setRules(Object.fromEntries((ruleRows || []).map(r => [r.name.toLowerCase(), r.id])));
       const eventIds = new Set((events || []).map(e => e.rule_id));
+      const todayReasons = new Set((txs || []).filter(row => row.reason === "Daily check-in" || row.reason === "Gratitude").map(row => row.reason));
       setEarned((ruleRows || []).filter(r => eventIds.has(r.id)).map(r => r.name));
+      if (todayReasons.has("Daily check-in")) setCheckInSaved(true);
+      if (todayReasons.has("Gratitude")) setGratitudeSaved(true);
       setLoading(false);
     }
     load();
   }, [router, supabase]);
 
   async function saveCheckIn() {
+    if (savingCheckIn || checkInSaved) return;
+    setSavingCheckIn(true);
+    setMessage("");
     const { data } = await supabase.auth.getUser();
-    if (!data.user) return router.replace("/login");
-    const { error } = await supabase.from("daily_logs").upsert({ user_id: data.user.id, log_date: new Date().toISOString().slice(0, 10), mood, gratitude }, { onConflict: "user_id,log_date" });
-    setMessage(error ? error.message : "Saved.");
+    if (!data.user) { setSavingCheckIn(false); return router.replace("/login"); }
+    const today = new Date().toISOString().slice(0, 10);
+    const { error } = await supabase.from("daily_logs").upsert({ user_id: data.user.id, log_date: today, mood, gratitude }, { onConflict: "user_id,log_date" });
+    if (error) {
+      setMessage(error.message);
+      setSavingCheckIn(false);
+      return;
+    }
+    const { data: existing } = await supabase.from("point_transactions").select("id").eq("user_id", data.user.id).eq("reason", "Daily check-in").gte("created_at", `${today}T00:00:00.000Z`).maybeSingle();
+    if (!existing) {
+      const { error: pointError } = await supabase.from("point_transactions").insert({ user_id: data.user.id, amount: 2, reason: "Daily check-in" });
+      if (pointError) { setMessage(pointError.message); setSavingCheckIn(false); return; }
+      setPoints(p => p + 2);
+    }
+    setCheckInSaved(true);
+    setMessage("+2 momentum · Daily check-in saved.");
+    setSavingCheckIn(false);
+  }
+
+  async function saveGratitude() {
+    if (savingGratitude || gratitudeSaved || !gratitude.trim()) return;
+    setSavingGratitude(true);
+    setMessage("");
+    const { data } = await supabase.auth.getUser();
+    if (!data.user) { setSavingGratitude(false); return router.replace("/login"); }
+    const today = new Date().toISOString().slice(0, 10);
+    const { error } = await supabase.from("daily_logs").upsert({ user_id: data.user.id, log_date: today, mood, gratitude }, { onConflict: "user_id,log_date" });
+    if (error) {
+      setMessage(error.message);
+      setSavingGratitude(false);
+      return;
+    }
+    const { data: existing } = await supabase.from("point_transactions").select("id").eq("user_id", data.user.id).eq("reason", "Gratitude").gte("created_at", `${today}T00:00:00.000Z`).maybeSingle();
+    if (!existing) {
+      const { error: pointError } = await supabase.from("point_transactions").insert({ user_id: data.user.id, amount: 1, reason: "Gratitude" });
+      if (pointError) { setMessage(pointError.message); setSavingGratitude(false); return; }
+      setPoints(p => p + 1);
+    }
+    setGratitudeSaved(true);
+    setMessage("+1 momentum · Gratitude saved.");
+    setSavingGratitude(false);
   }
 
   async function award(name: string, value: number) {
@@ -103,8 +151,8 @@ export default function Home() {
     </section>
 
     <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 16, marginTop: 16 }}>
-      <div style={{ background: "white", borderRadius: 20, padding: 24 }}><div style={{ fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, opacity: .55 }}>Daily check-in</div><h2 style={{ margin: "8px 0 16px" }}>How are you right now?</h2><input aria-label="Mood" type="range" min="1" max="10" value={mood} onChange={e => setMood(Number(e.target.value))} style={{ width: "100%" }} /><div style={{ marginTop: 8, fontWeight: 700 }}>{mood}/10</div><button onClick={saveCheckIn} style={{ marginTop: 12, border: 0, borderRadius: 10, padding: 10, background: "#171717", color: "white" }}>Save check-in</button></div>
-      <div style={{ background: "white", borderRadius: 20, padding: 24 }}><div style={{ fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, opacity: .55 }}>Gratitude</div><h2 style={{ margin: "8px 0 12px" }}>What are you grateful for?</h2><textarea value={gratitude} onChange={e => setGratitude(e.target.value)} placeholder="One thing is enough." style={{ width: "100%", minHeight: 70, border: "1px solid #ddd", borderRadius: 10, padding: 10, resize: "vertical" }} /><button onClick={saveCheckIn} style={{ marginTop: 10, border: 0, borderRadius: 10, padding: 10, background: "#171717", color: "white" }}>Save gratitude</button></div>
+      <div style={{ background: "white", borderRadius: 20, padding: 24 }}><div style={{ fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, opacity: .55 }}>Daily check-in</div><h2 style={{ margin: "8px 0 16px" }}>How are you right now?</h2><input aria-label="Mood" type="range" min="1" max="10" value={mood} onChange={e => { setMood(Number(e.target.value)); setCheckInSaved(false); }} style={{ width: "100%" }} /><div style={{ marginTop: 8, fontWeight: 700 }}>{mood}/10</div><button onClick={saveCheckIn} disabled={savingCheckIn || checkInSaved} style={{ marginTop: 12, border: 0, borderRadius: 10, padding: 10, background: checkInSaved ? "#e7e5e0" : "#171717", color: checkInSaved ? "#555" : "white" }}>{savingCheckIn ? "Saving…" : checkInSaved ? "✓ Saved +2" : "Save check-in +2"}</button></div>
+      <div style={{ background: "white", borderRadius: 20, padding: 24 }}><div style={{ fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, opacity: .55 }}>Gratitude</div><h2 style={{ margin: "8px 0 12px" }}>What are you grateful for?</h2><textarea value={gratitude} onChange={e => { setGratitude(e.target.value); setGratitudeSaved(false); }} placeholder="One thing is enough." style={{ width: "100%", minHeight: 70, border: "1px solid #ddd", borderRadius: 10, padding: 10, resize: "vertical" }} /><button onClick={saveGratitude} disabled={savingGratitude || gratitudeSaved || !gratitude.trim()} style={{ marginTop: 10, border: 0, borderRadius: 10, padding: 10, background: gratitudeSaved ? "#e7e5e0" : "#171717", color: gratitudeSaved ? "#555" : "white" }}>{savingGratitude ? "Saving…" : gratitudeSaved ? "✓ Saved +1" : "Save gratitude +1"}</button></div>
     </section>
 
     <section style={{ marginTop: 16, background: "white", borderRadius: 20, padding: 24 }}><div style={{ display: "flex", justifyContent: "space-between", gap: 20 }}><div><div style={{ fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, opacity: .55 }}>Level {level}</div><h2 style={{ margin: "8px 0 4px" }}>Momentum meter</h2></div><b>{points % 25}/25</b></div><div style={{ height: 10, background: "#e9e7e2", borderRadius: 20, marginTop: 16, overflow: "hidden" }}><div style={{ width: `${progress}%`, height: "100%", background: "#171717", transition: "width .25s" }} /></div>{message && <div style={{ marginTop: 12, opacity: .7 }}>{message}</div>}</section>
