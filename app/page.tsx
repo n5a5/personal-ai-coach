@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
-const affirmation = "I can control what I do today. I am doing everything I can, and I don't need to solve tomorrow today.";
+const affirmation = "If you are distressed by anything external, the pain is not due to the thing itself, but to your estimate of it; and this you have the power to revoke at any moment.";
 const actions = [
   { name: "Workout — 20–30 min", detail: "Complete a 20–30 minute workout.", points: 4, icon: "💪", key: "Workout" },
   { name: "Workout — 45–60 min", detail: "Complete a 45–60 minute workout.", points: 8, icon: "💪", key: "Workout" },
@@ -22,7 +22,6 @@ export default function Home() {
   const supabase = createClient();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [showReset, setShowReset] = useState(false);
   const [showGameify, setShowGameify] = useState(false);
   const [mood, setMood] = useState(7);
   const [gratitude, setGratitude] = useState("");
@@ -37,7 +36,6 @@ export default function Home() {
   const [alcoholToday, setAlcoholToday] = useState(0);
 
   const level = useMemo(() => Math.floor(points / 25) + 1, [points]);
-  const progress = (Math.max(0, points) % 25) / 25 * 100;
 
   useEffect(() => {
     async function load() {
@@ -134,32 +132,56 @@ export default function Home() {
 
   async function signOut() { await supabase.auth.signOut(); router.replace("/login"); }
 
-  if (loading) return <main style={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>Loading your coach…</main>;
+  if (loading) return <main className="today-page-loading">Loading your coach…</main>;
 
-  return <main style={{ maxWidth: 980, margin: "0 auto", padding: "32px 20px 70px" }}>
-    <header style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 20, marginBottom: 28 }}>
-      <div><div style={{ fontSize: 13, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", opacity: .55 }}>Personal AI Coach</div><h1 style={{ fontSize: 42, margin: "8px 0 6px" }}>Build a better day.</h1><p style={{ margin: 0, fontSize: 18, opacity: .7 }}>One day at a time. One decision at a time.</p></div>
-      <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-        <button onClick={() => setShowGameify(true)} style={{ background: "#171717", color: "white", border: 0, borderRadius: 16, padding: "14px 18px", minWidth: 190, textAlign: "left", cursor: "pointer" }}><div style={{ fontSize: 12, opacity: .65, textTransform: "uppercase", letterSpacing: 1 }}>🎮 Momentum</div><div style={{ fontSize: 28, fontWeight: 800, marginTop: 2 }}>{points} pts</div><div style={{ fontSize: 12, opacity: .7 }}>Gameify · Level {level} · {points % 25}/25 to next level</div></button>
-        <button onClick={signOut} style={{ border: "1px solid #ddd", background: "white", borderRadius: 10, padding: "9px 12px" }}>Sign out</button>
+  return <main className="today-page">
+    <header className="today-header">
+      <div className="today-title-group">
+        <div className="today-eyebrow">PERSONAL AI COACH</div>
+        <h1>Build a better day.</h1>
+        <p>One day at a time. One decision at a time.</p>
+      </div>
+      <div className="today-actions">
+        <button className="momentum-tile" onClick={() => setShowGameify(true)} aria-label="Open Momentum">
+          <div className="momentum-label">MOMENTUM</div>
+          <div className="momentum-points">{points} pts</div>
+          <div className="momentum-sub">Level {level} · {points % 25}/25 to next level</div>
+        </button>
+        <button className="signout-button" onClick={signOut}>Sign out</button>
       </div>
     </header>
 
-    <section style={{ background: "white", borderRadius: 20, padding: 24, marginBottom: 16, boxShadow: "0 8px 30px rgba(0,0,0,.06)" }}><div style={{ fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, opacity: .55 }}>Today&apos;s anchor</div><p style={{ fontSize: 22, lineHeight: 1.4, margin: "12px 0 0", fontWeight: 600 }}>{affirmation}</p></section>
-
-    <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 16 }}>
-      <button onClick={() => setShowReset(true)} style={{ textAlign: "left", border: 0, borderRadius: 20, padding: 24, background: "#1f2937", color: "white", minHeight: 150 }}><div style={{ fontSize: 28 }}>⚡</div><h2 style={{ margin: "8px 0 4px" }}>Reset</h2><div style={{ opacity: .75 }}>Regulate, reframe, choose the next useful action, and return to your life.</div></button>
+    <section className="today-anchor">
+      <div className="today-anchor-eyebrow">TODAY&apos;S PRINCIPLE</div>
+      <p>{affirmation}</p>
     </section>
 
-    <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 16, marginTop: 16 }}>
-      <div style={{ background: "white", borderRadius: 20, padding: 24 }}><div style={{ fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, opacity: .55 }}>Daily check-in</div><h2 style={{ margin: "8px 0 16px" }}>How are you right now?</h2><input aria-label="Mood" type="range" min="1" max="10" value={mood} onChange={e => { setMood(Number(e.target.value)); setCheckInSaved(false); }} style={{ width: "100%" }} /><div style={{ marginTop: 8, fontWeight: 700 }}>{mood}/10</div><button onClick={saveCheckIn} disabled={savingCheckIn || checkInSaved} style={{ marginTop: 12, border: 0, borderRadius: 10, padding: 10, background: checkInSaved ? "#e7e5e0" : "#171717", color: checkInSaved ? "#555" : "white" }}>{savingCheckIn ? "Saving…" : checkInSaved ? "✓ Saved +2" : "Save check-in +2"}</button></div>
-      <div style={{ background: "white", borderRadius: 20, padding: 24 }}><div style={{ fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, opacity: .55 }}>Gratitude</div><h2 style={{ margin: "8px 0 12px" }}>What are you grateful for?</h2><textarea value={gratitude} onChange={e => { setGratitude(e.target.value); setGratitudeSaved(false); }} placeholder="One thing is enough." style={{ width: "100%", minHeight: 70, border: "1px solid #ddd", borderRadius: 10, padding: 10, resize: "vertical" }} /><button onClick={saveGratitude} disabled={savingGratitude || gratitudeSaved || !gratitude.trim()} style={{ marginTop: 10, border: 0, borderRadius: 10, padding: 10, background: gratitudeSaved ? "#e7e5e0" : "#171717", color: gratitudeSaved ? "#555" : "white" }}>{savingGratitude ? "Saving…" : gratitudeSaved ? "✓ Saved +1" : "Save gratitude +1"}</button></div>
+    <section className="today-entry-row">
+      <a className="reset-entry" href="/reset">
+        <div className="reset-entry-icon">↻</div>
+        <div>
+          <div className="reset-entry-title">Reset</div>
+          <div className="reset-entry-copy">Feeling anxious, overloaded, angry, stuck, or off? Reset and return to your life.</div>
+        </div>
+      </a>
     </section>
 
-    <section style={{ marginTop: 16, background: "white", borderRadius: 20, padding: 24 }}><div style={{ fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, opacity: .55 }}>Today&apos;s focus</div><div style={{ display: "grid", gap: 10, marginTop: 14 }}>{[["Move", "Exercise / build muscle / lose fat"],["Mind", "Meditation, music, learning, and mental reset"],["Family", "Be present with wife and kids"],["Growth", "Work on the system that makes tomorrow better"]].map(([title, text]) => <div key={title} style={{ padding: "12px 14px", border: "1px solid #e5e5e5", borderRadius: 12 }}><b>{title}</b><span style={{ marginLeft: 10, opacity: .7 }}>{text}</span></div>)}</div></section>
+    <section className="today-journal-grid">
+      <div className="today-card">
+        <div className="today-card-eyebrow">DAILY CHECK-IN</div>
+        <h2>How are you right now?</h2>
+        <input aria-label="Mood" type="range" min="1" max="10" value={mood} onChange={e => { setMood(Number(e.target.value)); setCheckInSaved(false); }} />
+        <div className="mood-value">{mood}/10</div>
+        <button className={`save-button ${checkInSaved ? "saved" : ""}`} onClick={saveCheckIn} disabled={savingCheckIn || checkInSaved}>{savingCheckIn ? "Saving…" : checkInSaved ? "✓ Saved +2" : "Save check-in +2"}</button>
+      </div>
+      <div className="today-card">
+        <div className="today-card-eyebrow">GRATITUDE</div>
+        <h2>What are you grateful for?</h2>
+        <textarea value={gratitude} onChange={e => { setGratitude(e.target.value); setGratitudeSaved(false); }} placeholder="One thing is enough." />
+        <button className={`save-button ${gratitudeSaved ? "saved" : ""}`} onClick={saveGratitude} disabled={savingGratitude || gratitudeSaved || !gratitude.trim()}>{savingGratitude ? "Saving…" : gratitudeSaved ? "✓ Saved +1" : "Save gratitude +1"}</button>
+      </div>
+    </section>
 
-    {showGameify && <div role="dialog" aria-modal="true" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", display: "grid", placeItems: "center", padding: 20, zIndex: 10 }}><div style={{ maxWidth: 600, width: "100%", maxHeight: "90vh", overflow: "auto", background: "white", borderRadius: 24, padding: 28 }}><div style={{ display: "flex", justifyContent: "space-between" }}><div><div style={{ fontSize: 13, fontWeight: 700, textTransform: "uppercase", opacity: .55 }}>Gameify</div><h2 style={{ fontSize: 30, margin: "8px 0 6px" }}>Build momentum. Spend intentionally.</h2></div><button onClick={() => setShowGameify(false)} style={{ border: 0, background: "transparent", fontSize: 24 }}>×</button></div><p style={{ opacity: .7 }}>Points reinforce behaviors that make your life better. Discretionary choices have an opportunity cost.</p><h3>Earn</h3>{actions.map(a => <button key={a.name} onClick={() => award(a.name, a.points, a.key)} disabled={earned.includes(a.key)} style={{ width: "100%", textAlign: "left", border: "1px solid #e5e5e5", background: earned.includes(a.key) ? "#f1f1ef" : "white", borderRadius: 12, padding: 13, marginBottom: 8, opacity: earned.includes(a.key) ? .6 : 1 }}><b>{a.icon} {a.name}</b><span style={{ marginLeft: 10, opacity: .65 }}>{a.detail}</span><strong style={{ float: "right" }}>+{a.points}</strong></button>)}<h3>Spend</h3>{costs.map(c => <button key={c.name} onClick={() => spend(c.name, c.points)} disabled={points < Math.abs(c.points)} style={{ width: "100%", textAlign: "left", border: "1px solid #e5e5e5", background: "white", borderRadius: 12, padding: 13, marginBottom: 8, opacity: points < Math.abs(c.points) ? .45 : 1 }}><b>{c.icon} {c.name}</b><span style={{ marginLeft: 10, opacity: .65 }}>{c.detail}</span><strong style={{ float: "right" }}>{c.points}</strong>{c.name === "Alcohol" && <div style={{ marginTop: 6, fontSize: 12, opacity: .65 }}>Today: {alcoholToday} drink{alcoholToday === 1 ? "" : "s"} · {alcoholToday * 4} points spent</div>}</button>)}<div style={{ marginTop: 16, padding: 16, background: "#f5f3ef", borderRadius: 12, fontWeight: 700 }}>Balance: {points} points · Level {level}</div></div></div>}
-
-    {showReset && <div role="dialog" aria-modal="true" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", display: "grid", placeItems: "center", padding: 20, zIndex: 20 }}><div style={{ maxWidth: 520, width: "100%", background: "white", borderRadius: 24, padding: 28 }}><div style={{ fontSize: 13, fontWeight: 700, textTransform: "uppercase", opacity: .55 }}>Reset</div><h2 style={{ fontSize: 30, margin: "8px 0 14px" }}>Pause. Nothing needs to be solved this minute.</h2><ol style={{ lineHeight: 1.8, paddingLeft: 24 }}><li>Slow your breathing.</li><li>Name what you are feeling without judging it.</li><li>Separate <b>facts</b> from predictions.</li><li>Ask: <b>What can I actually do today?</b></li><li>Choose one small useful action — then return to your life.</li></ol><button onClick={() => setShowReset(false)} style={{ width: "100%", border: 0, borderRadius: 12, padding: 14, background: "#171717", color: "white", fontWeight: 700 }}>I&apos;m ready — back to today</button></div></div>}
+    {showGameify && <div role="dialog" aria-modal="true" className="gameify-modal"><div className="gameify-panel"><div className="gameify-head"><div><div className="today-card-eyebrow">MOMENTUM</div><h2>Build momentum. Spend intentionally.</h2></div><button className="modal-close" onClick={() => setShowGameify(false)} aria-label="Close">×</button></div><p>Points reinforce behaviors that make your life better. Discretionary choices have an opportunity cost.</p><h3>Earn</h3>{actions.map(a => <button key={a.name} onClick={() => award(a.name, a.points, a.key)} disabled={earned.includes(a.key)} className={`gameify-row ${earned.includes(a.key) ? "earned" : ""}`}><b>{a.icon} {a.name}</b><span>{a.detail}</span><strong>+{a.points}</strong></button>)}<h3>Spend</h3>{costs.map(c => <button key={c.name} onClick={() => spend(c.name, c.points)} disabled={points < Math.abs(c.points)} className="gameify-row"><b>{c.icon} {c.name}</b><span>{c.detail}</span><strong>{c.points}</strong>{c.name === "Alcohol" && <small>Today: {alcoholToday} drink{alcoholToday === 1 ? "" : "s"} · {alcoholToday * 4} points spent</small>}</button>)}<div className="gameify-balance">Balance: {points} points · Level {level}</div></div></div>}
   </main>;
 }
