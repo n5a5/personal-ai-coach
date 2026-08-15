@@ -6,8 +6,8 @@ import { useRouter } from "next/navigation";
 
 const affirmation = "I can control what I do today. I am doing everything I can, and I don't need to solve tomorrow today.";
 const actions = [
-  { name: "Workout — 20–30 min", detail: "Complete a 20–30 minute workout.", points: 4, icon: "💪", key: "Workout 20-30" },
-  { name: "Workout — 45–60 min", detail: "Complete a 45–60 minute workout.", points: 8, icon: "💪", key: "Workout 45-60" },
+  { name: "Workout — 20–30 min", detail: "Complete a 20–30 minute workout.", points: 4, icon: "💪", key: "Workout" },
+  { name: "Workout — 45–60 min", detail: "Complete a 45–60 minute workout.", points: 8, icon: "💪", key: "Workout" },
   { name: "Family Connection", detail: "Intentional time with wife or kids.", points: 3, icon: "❤️", key: "Family Connection" },
   { name: "Meditation", detail: "Meditate or deliberately quiet your mind.", points: 2, icon: "🧘", key: "Meditation" },
   { name: "Journaling", detail: "Meaningful reflection or daily check-in.", points: 2, icon: "✍️", key: "Journaling" },
@@ -72,11 +72,7 @@ export default function Home() {
     if (!data.user) { setSavingCheckIn(false); return router.replace("/login"); }
     const today = new Date().toISOString().slice(0, 10);
     const { error } = await supabase.from("daily_logs").upsert({ user_id: data.user.id, log_date: today, mood, gratitude }, { onConflict: "user_id,log_date" });
-    if (error) {
-      setMessage(error.message);
-      setSavingCheckIn(false);
-      return;
-    }
+    if (error) { setMessage(error.message); setSavingCheckIn(false); return; }
     const { data: existing } = await supabase.from("point_transactions").select("id").eq("user_id", data.user.id).eq("reason", "Daily check-in").gte("created_at", `${today}T00:00:00.000Z`).maybeSingle();
     if (!existing) {
       const { error: pointError } = await supabase.from("point_transactions").insert({ user_id: data.user.id, amount: 2, reason: "Daily check-in" });
@@ -96,11 +92,7 @@ export default function Home() {
     if (!data.user) { setSavingGratitude(false); return router.replace("/login"); }
     const today = new Date().toISOString().slice(0, 10);
     const { error } = await supabase.from("daily_logs").upsert({ user_id: data.user.id, log_date: today, mood, gratitude }, { onConflict: "user_id,log_date" });
-    if (error) {
-      setMessage(error.message);
-      setSavingGratitude(false);
-      return;
-    }
+    if (error) { setMessage(error.message); setSavingGratitude(false); return; }
     const { data: existing } = await supabase.from("point_transactions").select("id").eq("user_id", data.user.id).eq("reason", "Gratitude").gte("created_at", `${today}T00:00:00.000Z`).maybeSingle();
     if (!existing) {
       const { error: pointError } = await supabase.from("point_transactions").insert({ user_id: data.user.id, amount: 1, reason: "Gratitude" });
@@ -147,7 +139,10 @@ export default function Home() {
   return <main style={{ maxWidth: 980, margin: "0 auto", padding: "32px 20px 70px" }}>
     <header style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 20, marginBottom: 28 }}>
       <div><div style={{ fontSize: 13, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", opacity: .55 }}>Personal AI Coach</div><h1 style={{ fontSize: 42, margin: "8px 0 6px" }}>Build a better day.</h1><p style={{ margin: 0, fontSize: 18, opacity: .7 }}>One day at a time. One decision at a time.</p></div>
-      <button onClick={() => setShowGameify(true)} style={{ background: "#171717", color: "white", border: 0, borderRadius: 16, padding: "14px 18px", minWidth: 190, textAlign: "left", cursor: "pointer" }}><div style={{ fontSize: 12, opacity: .65, textTransform: "uppercase", letterSpacing: 1 }}>🎮 Momentum · Gameify</div><div style={{ fontSize: 28, fontWeight: 800, marginTop: 2 }}>{points} pts</div><div style={{ fontSize: 12, opacity: .7 }}>Level {level} · {points % 25}/25 to next level</div></button>
+      <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+        <button onClick={() => setShowGameify(true)} style={{ background: "#171717", color: "white", border: 0, borderRadius: 16, padding: "14px 18px", minWidth: 190, textAlign: "left", cursor: "pointer" }}><div style={{ fontSize: 12, opacity: .65, textTransform: "uppercase", letterSpacing: 1 }}>🎮 Momentum · Gameify</div><div style={{ fontSize: 28, fontWeight: 800, marginTop: 2 }}>{points} pts</div><div style={{ fontSize: 12, opacity: .7 }}>Level {level} · {points % 25}/25 to next level</div></button>
+        <button onClick={signOut} style={{ border: "1px solid #ddd", background: "white", borderRadius: 10, padding: "9px 12px" }}>Sign out</button>
+      </div>
     </header>
 
     <section style={{ background: "white", borderRadius: 20, padding: 24, marginBottom: 16, boxShadow: "0 8px 30px rgba(0,0,0,.06)" }}><div style={{ fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, opacity: .55 }}>Today&apos;s anchor</div><p style={{ fontSize: 22, lineHeight: 1.4, margin: "12px 0 0", fontWeight: 600 }}>{affirmation}</p></section>
