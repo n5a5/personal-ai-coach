@@ -5,30 +5,28 @@ import { useEffect } from "react";
 export default function RemoveAnxiousCard() {
   useEffect(() => {
     const hideRedundantCards = () => {
-      const sections = Array.from(document.querySelectorAll("section"));
-      for (const section of sections) {
-        const text = section.textContent?.replace(/\s+/g, " ").trim() || "";
-        if (/^I(?:’|')m anxious\b/.test(text) || /I(?:’|')m anxious/.test(text)) {
-          (section as HTMLElement).style.display = "none";
-        }
-        if (/^Reset\b/.test(text) || /⚡\s*Reset\b/.test(text)) {
-          (section as HTMLElement).style.display = "none";
-        }
-      }
-
       const buttons = Array.from(document.querySelectorAll("button"));
       for (const button of buttons) {
         const text = button.textContent?.replace(/\s+/g, " ").trim() || "";
-        if (/^I(?:’|')m anxious\b/.test(text) || /^⚡\s*Reset\b/.test(text)) {
-          const parent = button.closest("section") || button.parentElement;
-          if (parent) (parent as HTMLElement).style.display = "none";
+        if (text === "Reset" || text === "⚡ Reset") {
+          const card = button.closest("section");
+          if (card) (card as HTMLElement).remove();
         }
+      }
+
+      const anxious = Array.from(document.querySelectorAll("button")).find((button) => {
+        const text = button.textContent?.replace(/\s+/g, " ").trim() || "";
+        return /^I(?:’|')m anxious\b/.test(text);
+      });
+      if (anxious) {
+        const card = anxious.closest("section") || anxious.parentElement;
+        if (card) (card as HTMLElement).remove();
       }
     };
 
     hideRedundantCards();
-    const firstPass = window.setTimeout(hideRedundantCards, 100);
-    const secondPass = window.setTimeout(hideRedundantCards, 500);
+    const firstPass = window.setTimeout(hideRedundantCards, 50);
+    const secondPass = window.setTimeout(hideRedundantCards, 300);
     const observer = new MutationObserver(hideRedundantCards);
     observer.observe(document.body, { childList: true, subtree: true });
 
