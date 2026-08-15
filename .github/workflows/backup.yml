@@ -1,13 +1,45 @@
-name: Supabase backup placeholder
-
-# DISABLED: this repository is public, so database dumps must not be committed here.
-# Configure a private backup destination before enabling automated data exports.
+name: Encrypted database backup
 
 on:
+  schedule:
+    - cron: "17 7 * * *"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+env:
+  PGCONNECT_TIMEOUT: "30"
+
 jobs:
-  backup-disabled:
+  backup:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - run: echo "Database backup is intentionally disabled because this repository is public."
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Create encrypted database dump
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_DB_URL"
+          test -n "$BACKUP_ENCRYPTION_KEY"
+          mkdir -p backup
+          pg_dump "$SUPABASE_DB_URL" --format=custom --no-owner --no-acl --file=backup/personal-ai-coach.dump
+          openssl enc -aes-256-cbc -pbkdf2 -salt \
+            -in backup/personal-ai-coach.dump \
+            -out backup/personal-ai-coach.dump.enc \
+            -pass env:BACKUP_ENCRYPTION_KEY
+          rm backup/personal-ai-coach.dump
+          sha256sum backup/personal-ai-coach.dump.enc > backup/SHA256SUMS.txt
+
+      - name: Upload encrypted backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: personal-ai-coach-db-${{ github.run_id }}
+          path: backup/
+          retention-days: 30
+          if-no-files-found: error
