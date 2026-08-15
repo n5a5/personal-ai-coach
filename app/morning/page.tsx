@@ -3,6 +3,14 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
+function localDate() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 export default function MorningPage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -12,7 +20,11 @@ export default function MorningPage() {
     setLoading(true);
     setError("");
     try {
-      const response = await fetch("/api/morning", { method: "POST" });
+      const response = await fetch("/api/morning", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date: localDate() }),
+      });
       const data = await response.json();
       if (data.setup) throw new Error("Live AI is not configured yet.");
       if (!response.ok || data.error) throw new Error(data.error || "Unable to build your morning plan.");
@@ -39,7 +51,7 @@ export default function MorningPage() {
           <div style={{ padding: "36px 8px", textAlign: "center" }}>
             <div style={eyebrow}>YOUR COACH IS THINKING</div>
             <h2 style={{ margin: "10px 0 6px" }}>Building your day…</h2>
-            <p style={{ opacity: .65 }}>Looking at your goals, recent days, memories, and what matters right now.</p>
+            <p style={{ opacity: .65 }}>Looking at your goals, memories, recent days, and what you actually followed through on.</p>
           </div>
         ) : error ? (
           <div>
