@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
 type Message = { role:"user"|"assistant"; content:string };
-const supabase = createClient();
 
 const starters = [
   ["Start my day", "Help me decide what matters most today and keep me from becoming overwhelmed."],
@@ -16,6 +15,7 @@ const starters = [
 
 export default function CoachPage() {
   const router = useRouter();
+  const supabase = useMemo(() => createClient(), []);
   const [messages,setMessages] = useState<Message[]>([]);
   const [input,setInput] = useState("");
   const [loading,setLoading] = useState(false);
@@ -27,16 +27,22 @@ export default function CoachPage() {
   useEffect(()=>{
     let active=true;
     async function load(){
-      const {data:{user}}=await supabase.auth.getUser();
-      if(!user){ router.replace("/login"); return; }
-      const {data,error}=await supabase.from("coach_messages").select("role,content").eq("user_id",user.id).order("created_at",{ascending:true}).limit(50);
-      if(!active)return;
-      if(error){setError(error.message);} else if(data){setMessages(data.filter((m):m is Message => m.role==="user"||m.role==="assistant").map(m=>({role:m.role,content:m.content})));}
-      setPageLoading(false);
+      try {
+        const {data:{user},error:authError}=await supabase.auth.getUser();
+        if(authError) throw authError;
+        if(!user){ router.replace("/login"); return; }
+        const {data,error:messageError}=await supabase.from("coach_messages").select("role,content").eq("user_id",user.id).order("created_at",{ascending:true}).limit(50);
+        if(!active)return;
+        if(messageError){setError(messageError.message);} else if(data){setMessages(data.filter((m):m is Message => m.role==="user"||m.role==="assistant").map(m=>({role:m.role,content:m.content})));}
+      } catch (e) {
+        if(active) setError(e instanceof Error ? e.message : "I couldn't load your coach right now.");
+      } finally {
+        if(active) setPageLoading(false);
+      }
     }
     load();
     return ()=>{active=false;};
-  },[router]);
+  },[router,supabase]);
 
   useEffect(()=>bottom.current?.scrollIntoView({behavior:"smooth"}),[messages,loading]);
 
