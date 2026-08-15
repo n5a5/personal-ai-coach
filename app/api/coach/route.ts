@@ -25,3 +25,5 @@ export async function POST(req: Request) {
   await supabase.from("coach_messages").insert([{user_id:user.id,role:"user",content:messages.at(-1)?.content||""},{user_id:user.id,role:"assistant",content:text}]);
   return Response.json({message:text});
 }
+
+// Deployment trigger after environment configuration.
