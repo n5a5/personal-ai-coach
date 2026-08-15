@@ -37,6 +37,9 @@ input, textarea { min-width: 0; }
 .evening-nudge.complete { background: rgba(255,255,255,.06); }
 .evening-nudge.complete .evening-nudge-link { opacity: .75; }
 
+/* Today: Reset is a dedicated navigation destination, not a dashboard tile. */
+body:has(.todays-plan) > main > section:nth-of-type(2) { display: none !important; }
+
 .reference-page { min-height: 100vh; padding: 22px 18px 90px; }
 .reference-wrap { max-width: 900px; margin: 0 auto; }
 .back-link { color: #171717; text-decoration: none; font-weight: 700; display: inline-flex; align-items: center; min-height: 44px; }
