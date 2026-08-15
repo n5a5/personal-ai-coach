@@ -73,12 +73,12 @@ export default function Home() {
     if (error) { setMessage(error.message); setSavingCheckIn(false); return; }
     const { data: existing } = await supabase.from("point_transactions").select("id").eq("user_id", data.user.id).eq("reason", "Daily check-in").gte("created_at", `${today}T00:00:00.000Z`).maybeSingle();
     if (!existing) {
-      const { error: pointError } = await supabase.from("point_transactions").insert({ user_id: data.user.id, amount: 2, reason: "Daily check-in" });
+      const { error: pointError } = await supabase.from("point_transactions").insert({ user_id: data.user.id, amount: 1, reason: "Daily check-in" });
       if (pointError) { setMessage(pointError.message); setSavingCheckIn(false); return; }
-      setPoints(p => p + 2);
+      setPoints(p => p + 1);
     }
     setCheckInSaved(true);
-    setMessage("+2 momentum · Daily check-in saved.");
+    setMessage("+1 momentum · Daily check-in saved.");
     setSavingCheckIn(false);
   }
 
@@ -171,7 +171,7 @@ export default function Home() {
         <h2>How are you right now?</h2>
         <input aria-label="Mood" type="range" min="1" max="10" value={mood} onChange={e => { setMood(Number(e.target.value)); setCheckInSaved(false); }} />
         <div className="mood-value">{mood}/10</div>
-        <button className={`save-button ${checkInSaved ? "saved" : ""}`} onClick={saveCheckIn} disabled={savingCheckIn || checkInSaved}>{savingCheckIn ? "Saving…" : checkInSaved ? "✓ Saved +2" : "Save check-in +2"}</button>
+        <button className={`save-button ${checkInSaved ? "saved" : ""}`} onClick={saveCheckIn} disabled={savingCheckIn || checkInSaved}>{savingCheckIn ? "Saving…" : checkInSaved ? "✓ Saved +1" : "Save check-in +1"}</button>
       </div>
       <div className="today-card">
         <div className="today-card-eyebrow">GRATITUDE</div>
