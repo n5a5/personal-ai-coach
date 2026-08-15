@@ -1,0 +1,67 @@
+/* Today page geometry: keep major surfaces aligned and reduce dead space. */
+body:has(.today-page) > .morning-launch,
+body:has(.today-page) > .todays-plan {
+  width: calc(100% - 40px);
+  max-width: 980px;
+  box-sizing: border-box;
+}
+
+body:has(.today-page) > .morning-launch {
+  margin-top: 8px;
+}
+
+body:has(.today-page) > .todays-plan {
+  margin-top: 12px;
+}
+
+.today-page {
+  padding-bottom: 24px !important;
+}
+
+.today-journal-grid {
+  gap: 12px !important;
+}
+
+.today-card {
+  min-height: 210px !important;
+  padding: 18px !important;
+}
+
+.today-anchor {
+  margin-bottom: 12px !important;
+  padding: 20px 22px !important;
+}
+
+.today-anchor p {
+  line-height: 1.45 !important;
+}
+
+@media (max-width: 640px) {
+  .today-page {
+    padding-bottom: 24px !important;
+  }
+
+  body:has(.today-page) > .morning-launch,
+  body:has(.today-page) > .todays-plan {
+    width: calc(100% - 28px);
+    max-width: none;
+  }
+
+  body:has(.today-page) > .morning-launch {
+    margin-top: 8px;
+  }
+
+  body:has(.today-page) > .todays-plan {
+    margin-top: 12px;
+  }
+
+  .today-card {
+    min-height: 190px !important;
+    padding: 16px !important;
+  }
+
+  .today-anchor {
+    padding: 18px !important;
+    margin-bottom: 12px !important;
+  }
+}
