@@ -76,6 +76,21 @@ export default function ReferencePage() {
           <p>This is your quick-reference library. Use it when you're stuck, anxious, angry, overwhelmed, or simply need a better question.</p>
         </header>
 
+        <section className="reference-section estimate-principle">
+          <div className="eyebrow">CORE PRINCIPLE</div>
+          <h2>The Estimate Principle</h2>
+          <blockquote>
+            “If you are distressed by anything external, the pain is not due to the thing itself, but to your estimate of it; and this you have the power to revoke at any moment.”
+          </blockquote>
+          <p className="section-intro">The event and your interpretation of the event are not the same thing. When distress spikes, separate what happened from what you are telling yourself it means, then decide what response is useful.</p>
+          <div className="reference-grid">
+            <article className="reference-card"><h3>EVENT</h3><p>What actually happened?</p></article>
+            <article className="reference-card"><h3>ESTIMATE</h3><p>What am I telling myself it means?</p></article>
+            <article className="reference-card"><h3>REVOKE</h3><p>Is that interpretation accurate, necessary, useful, and within my control?</p></article>
+            <article className="reference-card"><h3>RESPONSE</h3><p>Given the facts, what do I choose to do next?</p></article>
+          </div>
+        </section>
+
         <section className="reference-section">
           <div className="eyebrow">EMOTIONAL SIGNALS</div>
           <h2>What the feeling may be telling you.</h2>
