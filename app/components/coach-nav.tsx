@@ -9,6 +9,7 @@ const links = [
   ["/reset", "Reset", "↺"],
   ["/coach", "Coach", "✦"],
   ["/profile", "Profile", "○"],
+  ["/reference", "Reference", "?"],
 ];
 
 export default function CoachNav() {
