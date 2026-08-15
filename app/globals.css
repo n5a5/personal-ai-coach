@@ -29,6 +29,13 @@ input, textarea { min-width: 0; }
 .plan-item.done .plan-check { background: white; color: #171717; border-color: white; }
 .plan-save-error { margin: 0 0 10px; padding: 9px 11px; width: 100%; text-align: left; color: white; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2); border-radius: 10px; font-size: 12px; }
 .plan-complete-message { margin-top: 11px; text-align: center; font-size: 13px; font-weight: 700; opacity: .72; }
+.evening-nudge { margin-top: 14px; padding: 15px 16px; border-radius: 14px; background: rgba(255,255,255,.11); border: 1px solid rgba(255,255,255,.13); display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.evening-nudge-copy { display: grid; gap: 4px; min-width: 0; }
+.evening-nudge-copy strong { font-size: 16px; }
+.evening-nudge-copy span { font-size: 12px; line-height: 1.45; opacity: .68; }
+.evening-nudge-link { flex: 0 0 auto; color: #171717; background: white; text-decoration: none; border-radius: 10px; padding: 10px 13px; font-size: 13px; font-weight: 800; }
+.evening-nudge.complete { background: rgba(255,255,255,.06); }
+.evening-nudge.complete .evening-nudge-link { opacity: .75; }
 
 .reference-page { min-height: 100vh; padding: 22px 18px 90px; }
 .reference-wrap { max-width: 900px; margin: 0 auto; }
@@ -66,6 +73,8 @@ input, textarea { min-width: 0; }
   .todays-plan h2 { font-size: 21px; }
   .plan-morning-link { display: inline-flex; margin-top: 12px; min-height: 44px; align-items: center; }
   .plan-item { min-height: 48px; }
+  .evening-nudge { align-items: stretch; flex-direction: column; }
+  .evening-nudge-link { text-align: center; }
   main > header { display: block !important; margin-bottom: 20px !important; }
   main > header > div:first-child { margin-bottom: 16px !important; }
   main > header > div:first-child p { font-size: 17px !important; line-height: 1.35 !important; }
