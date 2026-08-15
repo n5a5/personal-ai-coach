@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const links = [
   ["/", "Today", "⌂"],
   ["/morning", "Morning", "☀"],
+  ["/evening", "Evening", "☾"],
   ["/reset", "Reset", "↺"],
   ["/coach", "Coach", "✦"],
   ["/profile", "Profile", "○"],
