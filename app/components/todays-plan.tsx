@@ -37,17 +37,31 @@ export default function TodaysPlan() {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [hasPlan, setHasPlan] = useState(false);
+  const [eveningCompleted, setEveningCompleted] = useState(false);
+  const [showEvening, setShowEvening] = useState(false);
 
   async function loadPlan() {
     try {
-      const response = await fetch(`/api/daily-plan?date=${localDate()}`, { cache: "no-store" });
-      if (!response.ok) return;
-      const data = await response.json();
-      const next = normalizeItems(data.plan?.items);
-      if (next.length) {
-        setItems(next);
-        setHasPlan(true);
+      const date = localDate();
+      const response = await fetch(`/api/daily-plan?date=${date}`, { cache: "no-store" });
+      if (response.ok) {
+        const data = await response.json();
+        const next = normalizeItems(data.plan?.items);
+        if (next.length) {
+          setItems(next);
+          setHasPlan(true);
+        }
       }
+
+      // Evening is a lightweight Supabase read — it does not call the AI API.
+      const eveningResponse = await fetch(`/api/evening-status?date=${date}`, { cache: "no-store" });
+      if (eveningResponse.ok) {
+        const evening = await eveningResponse.json();
+        setEveningCompleted(Boolean(evening.completed));
+      }
+
+      // Surface the evening loop during the natural wind-down window.
+      setShowEvening(new Date().getHours() >= 18);
     } catch {}
   }
 
@@ -121,6 +135,17 @@ export default function TodaysPlan() {
       </div>
       {completed === items.length && items.length > 0 && (
         <div className="plan-complete-message">Day moved forward. Nice work.</div>
+      )}
+
+      {showEvening && (
+        <div className={`evening-nudge ${eveningCompleted ? "complete" : ""}`}>
+          <div className="evening-nudge-copy">
+            <div className="eyebrow">Evening coach</div>
+            <strong>{eveningCompleted ? "You closed the loop." : "Close the loop before bed."}</strong>
+            <span>{eveningCompleted ? "Your reflection is saved. Tomorrow's coach can use it." : "2–3 minutes. Capture the win, the lesson, what you can let go, and what matters tomorrow."}</span>
+          </div>
+          <Link href="/evening" className="evening-nudge-link">{eveningCompleted ? "Review →" : "Reflect →"}</Link>
+        </div>
       )}
     </section>
   );
