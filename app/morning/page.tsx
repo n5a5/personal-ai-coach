@@ -27,13 +27,7 @@ export default function MorningPage() {
   useEffect(() => { buildMorning(); }, []);
 
   return (
-    <main style={{ maxWidth: 860, margin: "0 auto", padding: "28px 20px 70px" }}>
-      <nav style={{ display: "flex", gap: 10, marginBottom: 30 }}>
-        <Link href="/" style={navStyle}>Today</Link>
-        <Link href="/coach" style={navStyle}>Coach</Link>
-        <Link href="/profile" style={navStyle}>Profile</Link>
-      </nav>
-
+    <main style={{ maxWidth: 860, margin: "0 auto", padding: "28px 20px 90px" }}>
       <header style={{ marginBottom: 24 }}>
         <div style={eyebrow}>PERSONAL AI COACH</div>
         <h1 style={{ fontSize: 44, margin: "8px 0 6px" }}>Good morning.</h1>
@@ -75,7 +69,6 @@ export default function MorningPage() {
   );
 }
 
-const navStyle = { border: "1px solid #ddd", borderRadius: 10, padding: "8px 13px", color: "#111", background: "white", textDecoration: "none" };
 const eyebrow = { fontSize: 12, fontWeight: 750, letterSpacing: 1.4, opacity: .55 };
 const card = { background: "white", borderRadius: 22, padding: 28, boxShadow: "0 8px 30px rgba(0,0,0,.06)" };
 const primaryButton = { display: "inline-block", border: 0, borderRadius: 10, padding: "11px 15px", background: "#171717", color: "white", cursor: "pointer" };
