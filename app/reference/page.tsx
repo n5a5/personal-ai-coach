@@ -1,0 +1,124 @@
+import Link from "next/link";
+
+const signals = [
+  ["Uncomfortable", "When you feel uncomfortable, this is a signal to change your state. Clarify what you want, then take action in that direction."],
+  ["Fear", "Fear is a signal to prepare ourselves or get prepared. Get yourself prepared to deal with something that's about to come. If it's beyond your control, then change your perception and let it go. 5 Why's; worst case scenario."],
+  ["Hurt", "Hurt is a signal that you have an expectation that's not being met or you have a sense of loss. Evaluate whether there really is a loss. Next, change your perception or change the way of communicating your needs or change your behavior."],
+  ["Anger", "Anger is a signal that an important rule that you have in your life has been violated by somebody else or maybe even by you. Clarify your rules or adjust them. Your rules might not match other people's rules so if you don't change them, you might be angry the rest of your life."],
+  ["Frustration", "The signal is you're doing the same thing over and again expecting a different result. You need to change your approach to achieving your goal."],
+  ["Disappointment", "The signal is that you need to realize that an expectation or an outcome that you want won't happen, and you need to change your expectation. For example, maybe your timeframe was too short."],
+  ["Guilt or Regret", "Guilt is a signal that you violated one of your own standards. Don't stay in guilt, but don't deny it. Make things right when you screw up. When you can't change the past, change your present and future behaviors. Recognize when you're feeling guilty when you shouldn't be, change your perception, and let it go."],
+  ["Inadequacy", "This is a signal that you need to do something to get better. Get up and do something to get better or change your criteria. Maybe your rules are too harsh. You don't have to be perfect — you simply need to start taking action, such as go practice, to improve at whatever it is."],
+  ["Overloaded", "This is a signal to reevaluate what is most important to you in this situation. Distinguish between what is necessary versus what is a desire. Prioritize your list. Make the first one on your list and do something about it. Do something to take control of events instead of letting them control you. The simplest way is to chunk it down, take one thing and act on it."],
+  ["Loneliness", "The signal is we need a connection with people. Clarify what kind of connection you need: basic friendship, somebody to laugh with, somebody to listen to you, etc. Then change your approach or change your perception."],
+];
+
+const tools = [
+  ["Separate facts from predictions", "What has actually happened? What am I predicting? What proof would it take to change my mind?"],
+  ["Control", "Worry only about what you can control. You don't control what happens; you control how you respond."],
+  ["5 Why's", "When something feels wrong or stuck, ask why repeatedly until you reach the underlying issue you can actually act on."],
+  ["Worst-case scenario", "Define the feared outcome instead of letting the mind keep it vague. Then ask: what is actually likely, what could I do if it happened, and what can I do today?"],
+  ["Third-person perspective", "Step outside the emotional frame. What would you tell someone you love if they were dealing with exactly this?"],
+  ["Second arrow", "The first arrow is what happened. The second arrow is the additional suffering created by your reaction. Don't add a second problem to the first."],
+  ["State change", "Change your physical state before demanding that your mind solve a difficult problem: stand up, breathe slowly, relax your jaw, open your chest, and move."],
+  ["Present moment", "If you are distressed by something external, examine your estimate of it. Return attention to what is happening now and to the next controllable action."],
+  ["Action", "Done is better than perfect. Complexity is the enemy of execution. If you change nothing, nothing will change."],
+  ["Perspective", "The past does not equal the future. It is not your fault, but it is your responsibility. Base decisions on love, not fear."],
+];
+
+const questions = [
+  "HOW CAN I USE THIS?",
+  "Is this essential?",
+  "What would a healthy, ambitious, confident person do?",
+  "What would you do to accomplish your 5-year goals in the next 6 months if you had a gun to your head?",
+  "How do I get no/low risk and huge rewards?",
+  "What are you deeply passionate about?",
+  "What can you be the best in the world at?",
+  "What drives your economic engine?",
+  "What would you do if you were to start over?",
+  "Less, but better.",
+  "Go first.",
+  "What is my most generous interpretation of what just happened?",
+  "How do I add value for people around me?",
+  "What is the next useful action?",
+];
+
+const reminders = [
+  "Easy choices… hard life; hard choices… easy life.",
+  "You have power over your mind — not outside events. Realize this, and you will find strength.",
+  "PAIN × RESISTANCE = SUFFERING.",
+  "Worrying means you suffer twice.",
+  "A man who suffers before it is necessary, suffers more than is necessary.",
+  "Be tolerant with others and strict with yourself.",
+  "Associate only with people who improve you.",
+  "Less, but better.",
+  "Live while you're alive — no one will survive.",
+  "If you set your goals ridiculously high and it's a failure, you will fail above everyone else's success.",
+  "Success comes from uncertainty, not comfort.",
+  "No growth in comfort.",
+  "Novelty slows down time.",
+  "We are dying.",
+  "Be so secure in yourself that you can't be offended by other people.",
+  "Treat every relationship like it's the beginning of the relationship.",
+  "Someday is a disease that'll take your dreams to the grave with you.",
+  "You are in danger of living a life so comfortable and soft that you will die without ever realizing your true potential.",
+  "What one man can do, another man can do.",
+];
+
+export default function ReferencePage() {
+  return (
+    <main className="reference-page">
+      <div className="reference-wrap">
+        <Link href="/" className="back-link">← Today</Link>
+        <header className="reference-header">
+          <div className="eyebrow">PERSONAL COACH · REFERENCE</div>
+          <h1>Tools for thinking clearly.</h1>
+          <p>This is your quick-reference library. Use it when you're stuck, anxious, angry, overwhelmed, or simply need a better question.</p>
+        </header>
+
+        <section className="reference-section">
+          <div className="eyebrow">EMOTIONAL SIGNALS</div>
+          <h2>What the feeling may be telling you.</h2>
+          <p className="section-intro">Feelings are signals, not commands. Identify the signal, clarify what it means, then choose a response.</p>
+          <div className="reference-grid">
+            {signals.map(([title, body], i) => (
+              <article className="reference-card" key={title}>
+                <div className="reference-number">{i + 1}</div>
+                <h3>{title}</h3>
+                <p>{body}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="reference-section">
+          <div className="eyebrow">THINKING TOOLS</div>
+          <h2>Use these when your mind starts running.</h2>
+          <div className="reference-list">
+            {tools.map(([title, body]) => (
+              <article className="reference-row" key={title}>
+                <h3>{title}</h3><p>{body}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="reference-section">
+          <div className="eyebrow">QUESTIONS</div>
+          <h2>Questions that change the frame.</h2>
+          <div className="question-list">{questions.map(q => <div key={q}>{q}</div>)}</div>
+        </section>
+
+        <section className="reference-section">
+          <div className="eyebrow">REMINDERS</div>
+          <h2>Read one. Then act.</h2>
+          <div className="reminder-grid">{reminders.map(q => <div key={q} className="reminder">{q}</div>)}</div>
+        </section>
+
+        <section className="reference-footer">
+          <strong>Rule:</strong> Don't use the reference library to think forever. Use it to get clear, choose the next useful action, and return to your life.
+        </section>
+      </div>
+    </main>
+  );
+}
