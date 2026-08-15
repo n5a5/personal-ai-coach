@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 
 const FALLBACK_ITEMS = [
   { id: "move", text: "Move your body — choose the workout that makes today better.", completed: false },
-  { id: "mind", text: "Protect your mind — take a deliberate reset or quiet 10 minutes.", completed: false },
+  { id: "mind", text: "Protect your mind — take a deliberate reset or quiet 5 minutes.", completed: false },
   { id: "family", text: "Be present with family — give them your full attention for one meaningful moment.", completed: false },
   { id: "growth", text: "Move one important thing forward — choose the uncomfortable action that matters.", completed: false },
 ];
