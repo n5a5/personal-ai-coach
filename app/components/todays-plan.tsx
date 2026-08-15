@@ -9,7 +9,7 @@ type Plan = { id?: string; plan_date?: string; title?: string; items?: PlanItem[
 
 const fallback: PlanItem[] = [
   { id: "move", text: "Move your body — choose the workout that makes today better.", completed: false },
-  { id: "mind", text: "Protect your mind — take a deliberate reset or quiet 10 minutes.", completed: false },
+  { id: "mind", text: "Protect your mind — take a deliberate reset or quiet 5 minutes.", completed: false },
   { id: "family", text: "Be present with family — give them your full attention for one meaningful moment.", completed: false },
   { id: "growth", text: "Move one important thing forward — choose the uncomfortable action that matters.", completed: false },
 ];
@@ -53,14 +53,12 @@ export default function TodaysPlan() {
         }
       }
 
-      // Evening is a lightweight Supabase read — it does not call the AI API.
       const eveningResponse = await fetch(`/api/evening-status?date=${date}`, { cache: "no-store" });
       if (eveningResponse.ok) {
         const evening = await eveningResponse.json();
         setEveningCompleted(Boolean(evening.completed));
       }
 
-      // Surface the evening loop during the natural wind-down window.
       setShowEvening(new Date().getHours() >= 18);
     } catch {}
   }
@@ -120,22 +118,13 @@ export default function TodaysPlan() {
       {saveError && <button type="button" className="plan-save-error" onClick={() => setSaveError(null)}>{saveError}</button>}
       <div className="plan-items">
         {items.map(item => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => toggle(item.id)}
-            className={`plan-item ${item.completed ? "done" : ""}`}
-            disabled={savingId !== null}
-            aria-pressed={Boolean(item.completed)}
-          >
+          <button key={item.id} type="button" onClick={() => toggle(item.id)} className={`plan-item ${item.completed ? "done" : ""}`} disabled={savingId !== null} aria-pressed={Boolean(item.completed)}>
             <span className="plan-check" aria-hidden="true">{item.completed ? "✓" : ""}</span>
             <span>{item.text}</span>
           </button>
         ))}
       </div>
-      {completed === items.length && items.length > 0 && (
-        <div className="plan-complete-message">Day moved forward. Nice work.</div>
-      )}
+      {completed === items.length && items.length > 0 && <div className="plan-complete-message">Day moved forward. Nice work.</div>}
 
       {showEvening && (
         <div className={`evening-nudge ${eveningCompleted ? "complete" : ""}`}>
