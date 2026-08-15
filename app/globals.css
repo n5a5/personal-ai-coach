@@ -22,10 +22,13 @@ input, textarea { min-width: 0; }
 .plan-progress span { display: block; height: 100%; background: white; border-radius: inherit; transition: width .2s ease; }
 .plan-items { display: grid; gap: 7px; }
 .plan-item { width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; color: white; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.09); border-radius: 12px; padding: 11px 12px; font-size: 14px; line-height: 1.35; }
+.plan-item:disabled { cursor: wait; }
 .plan-check { width: 23px; height: 23px; flex: 0 0 23px; border: 1px solid rgba(255,255,255,.35); border-radius: 50%; display: grid; place-items: center; font-size: 13px; }
 .plan-item.done { opacity: .58; }
 .plan-item.done span:last-child { text-decoration: line-through; }
 .plan-item.done .plan-check { background: white; color: #171717; border-color: white; }
+.plan-save-error { margin: 0 0 10px; padding: 9px 11px; width: 100%; text-align: left; color: white; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2); border-radius: 10px; font-size: 12px; }
+.plan-complete-message { margin-top: 11px; text-align: center; font-size: 13px; font-weight: 700; opacity: .72; }
 
 .reference-page { min-height: 100vh; padding: 22px 18px 90px; }
 .reference-wrap { max-width: 900px; margin: 0 auto; }
