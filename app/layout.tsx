@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import CoachNav from "./components/coach-nav";
+import MorningLaunch from "./components/morning-launch";
 
 export const metadata: Metadata = {
   title: "Personal AI Coach",
@@ -8,5 +9,13 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body><CoachNav />{children}</body></html>;
+  return (
+    <html lang="en">
+      <body>
+        <CoachNav />
+        <MorningLaunch />
+        {children}
+      </body>
+    </html>
+  );
 }
