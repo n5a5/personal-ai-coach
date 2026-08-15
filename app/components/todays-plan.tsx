@@ -25,7 +25,7 @@ function localDate() {
 function normalizeItems(items?: PlanItem[]) {
   return (items || []).map(item => ({
     ...item,
-    text: item.detail || item.text || item.title || "",
+    text: (item.detail || item.text || item.title || "").replace(/\b10 minutes\b/g, "5 minutes"),
     completed: Boolean(item.completed ?? item.done),
   })).filter(item => item.text);
 }
@@ -112,7 +112,7 @@ export default function TodaysPlan() {
           <h2>{hasPlan ? "Do the few things that matter." : "Start with what matters."}</h2>
           <p>{completed} of {items.length} complete{savingId ? " · Saving…" : ""}</p>
         </div>
-        <Link href="/morning" className="plan-morning-link">{hasPlan ? "Rebuild with Morning Coach →" : "Build with Morning Coach →"}</Link>
+        <Link href="/morning" className="plan-morning-link">Plan in Morning Coach →</Link>
       </div>
       <div className="plan-progress"><span style={{ width: `${items.length ? completed / items.length * 100 : 0}%` }} /></div>
       {saveError && <button type="button" className="plan-save-error" onClick={() => setSaveError(null)}>{saveError}</button>}
