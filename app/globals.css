@@ -7,6 +7,11 @@ button { cursor: pointer; }
 button, a { -webkit-tap-highlight-color: transparent; }
 input, textarea { min-width: 0; }
 
+.coach-nav { max-width: 980px; margin: 0 auto; padding: 14px 20px 0; display: flex; gap: 8px; }
+.coach-nav a { text-decoration: none; color: #171717; background: white; border: 1px solid #e5e5e5; border-radius: 10px; padding: 8px 12px; font-size: 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
+.coach-nav a.active { color: white; background: #171717; }
+.nav-icon { display: none; }
+
 @media (max-width: 640px) {
   body { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
   main { width: 100% !important; max-width: 100% !important; padding-left: 14px !important; padding-right: 14px !important; }
@@ -14,4 +19,8 @@ input, textarea { min-width: 0; }
   h2 { line-height: 1.2; }
   textarea { max-width: 100%; }
   button, a { min-height: 44px; }
+  .coach-nav { position: fixed; z-index: 100; left: 0; right: 0; bottom: 0; max-width: none; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); background: rgba(255,255,255,.96); border-top: 1px solid #ddd; box-shadow: 0 -6px 20px rgba(0,0,0,.08); justify-content: space-around; gap: 8px; }
+  .coach-nav a { flex: 1; min-height: 52px; justify-content: center; flex-direction: column; gap: 2px; border: 0; border-radius: 12px; background: transparent; padding: 5px 8px; font-size: 11px; }
+  .coach-nav a.active { background: #171717; color: white; }
+  .nav-icon { display: block; font-size: 18px; line-height: 18px; }
 }
