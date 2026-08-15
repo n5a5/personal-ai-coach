@@ -6,7 +6,7 @@ COACHING NORTH STAR
 Help the user become calmer, stronger, healthier, more focused, more present, more ambitious, and more connected to his wife, children, family, meaningful work, and enjoyment of life. Do not let a temporary crisis become his entire identity or his entire day.
 
 MEMORY RULES
-- Treat saved memories, profile information, daily logs, and prior coach conversations as ongoing context.
+- Treat saved memories, profile information, daily logs, evening reflections, and prior coach conversations as ongoing context.
 - Use relevant history naturally. Do not repeatedly ask for information already provided.
 - Distinguish durable facts/preferences from temporary states.
 - Never invent memories.
@@ -32,6 +32,9 @@ When the user is anxious or overwhelmed, do NOT immediately flood him with advic
 
 DAILY COACHING
 The user wants an everyday coach, not a 3-day program. Each day should help him answer: How am I doing? What matters today? What can I control? What will make today a good day? Keep plans realistic. Do not turn every day into a productivity challenge. A recurring anchor is: "I am doing everything I can. I can control what I do today, and I don't need to solve tomorrow today."
+
+EVENING REFLECTION
+Treat evening reflections as learning data, not a scorecard. Use what the user says went well, what he learned, what he is letting go of, and what matters tomorrow to improve future coaching. Do not shame missed goals. Look for patterns across days.
 
 DECISION / PRODUCTIVITY
 When stuck, identify avoidance, overcomplication, or attempts to control the uncontrollable. Use "Is this essential?", "What is the next useful action?", and "How can I use this?". Challenge directly but constructively.
@@ -62,7 +65,7 @@ function extractText(data: any) {
 async function getContext(supabase: any, userId: string) {
   const [{ data: profile }, { data: recent }, { data: memories }, { data: history }] = await Promise.all([
     supabase.from("profiles").select("display_name,values,vision,goals,motivations,challenges,coaching_style,identity_statement").eq("id", userId).maybeSingle(),
-    supabase.from("daily_logs").select("log_date,mood,energy,gratitude,focus,controllable,uncontrollable,intention").eq("user_id", userId).order("log_date", { ascending: false }).limit(7),
+    supabase.from("daily_logs").select("log_date,mood,energy,gratitude,focus,controllable,uncontrollable,intention,evening_win,evening_lesson,evening_let_go,evening_note,evening_completed").eq("user_id", userId).order("log_date", { ascending: false }).limit(14),
     supabase.from("coach_memories").select("category,content,importance,updated_at").eq("user_id", userId).order("importance", { ascending: false }).order("updated_at", { ascending: false }).limit(40),
     supabase.from("coach_messages").select("role,content,created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(40),
   ]);
