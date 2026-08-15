@@ -15,10 +15,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en">
       <body>
         <CoachNav />
+        {children}
         <MorningLaunch />
         <TodaysPlan />
         <RemoveAnxiousCard />
-        {children}
       </body>
     </html>
   );
