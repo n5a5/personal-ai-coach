@@ -20,7 +20,6 @@ input, textarea { min-width: 0; }
   textarea { max-width: 100%; }
   button, a { min-height: 44px; }
 
-  /* True mobile-first header: title first, score second, sign-out compact. */
   main > header { display: block !important; margin-bottom: 20px !important; }
   main > header > div:first-child { margin-bottom: 16px !important; }
   main > header > div:first-child p { font-size: 17px !important; line-height: 1.35 !important; }
@@ -28,17 +27,29 @@ input, textarea { min-width: 0; }
   main > header > div:nth-child(2) > button:first-child { width: 100% !important; min-width: 0 !important; border-radius: 16px !important; padding: 14px 16px !important; }
   main > header > div:nth-child(2) > button:last-child { align-self: stretch !important; min-width: 0 !important; white-space: nowrap !important; padding: 9px 11px !important; }
 
-  /* Give dashboard cards breathing room without wasting vertical space. */
   main > section { border-radius: 18px !important; }
   main > section:not(:first-of-type) { margin-top: 14px !important; }
   main > section > div { min-width: 0; }
   main > section:nth-of-type(2) button { min-height: 132px !important; }
 
-  /* Gameify / reset dialogs use the full phone width with comfortable edges. */
   [role="dialog"] { padding: 12px !important; }
   [role="dialog"] > div { max-width: none !important; width: 100% !important; max-height: calc(100vh - 24px) !important; border-radius: 20px !important; padding: 20px !important; }
 
-  /* Fixed bottom navigation: no horizontal page scrolling and no clipped Profile tab. */
+  .coach-page { padding-bottom: calc(96px + env(safe-area-inset-bottom)) !important; }
+  .coach-page-header { align-items: stretch !important; }
+  .coach-page-header > div { min-width: 0; }
+  .coach-page-header > button { align-self: flex-start; }
+  .coach-start { padding: 18px !important; }
+  .coach-starters { grid-template-columns: 1fr !important; }
+  .coach-thread { min-height: 320px !important; padding: 12px !important; border-radius: 18px !important; }
+  .coach-thread > div > div { max-width: 94% !important; }
+  .coach-suggestion-row { flex-wrap: nowrap !important; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+  .coach-suggestion-row::-webkit-scrollbar { display: none; }
+  .coach-suggestion-row button { flex: 0 0 auto; white-space: nowrap; }
+  .coach-input { position: sticky; bottom: calc(76px + env(safe-area-inset-bottom)); z-index: 50; background: #f5f3ef; padding: 8px 0 4px; }
+  .coach-input input { min-height: 52px; }
+  .coach-input button { min-width: 82px; }
+
   .coach-nav { position: fixed; z-index: 100; left: 0; right: 0; bottom: 0; max-width: none; padding: 8px 8px calc(8px + env(safe-area-inset-bottom)); background: rgba(255,255,255,.97); border-top: 1px solid #ddd; box-shadow: 0 -6px 20px rgba(0,0,0,.08); justify-content: space-around; gap: 4px; }
   .coach-nav a { flex: 1 1 0; min-width: 0; min-height: 52px; justify-content: center; flex-direction: column; gap: 2px; border: 0; border-radius: 12px; background: transparent; padding: 5px 3px; font-size: 11px; line-height: 1.1; }
   .coach-nav a.active { background: #171717; color: white; }
