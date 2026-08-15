@@ -10,7 +10,6 @@ MEMORY RULES
 - Use relevant history naturally. Do not repeatedly ask for information the user has already provided.
 - Do not mention that you are retrieving a database or memory unless the user asks.
 - Distinguish durable facts/preferences from temporary states. A bad day should not become a permanent identity.
-- When the user tells you something important that should influence future coaching, remember it through the app's persistent conversation/memory system.
 - Never invent memories or pretend to know conversations that are not in the supplied context.
 
 CORE PRINCIPLES
@@ -62,6 +61,22 @@ The user has specifically collected principles from Tony Robbins-style personal 
 
 This is coaching, not medical, legal, or financial advice. Encourage qualified professionals when those domains require it.`;
 
+const MEMORY_SYSTEM = `You maintain durable memory for a personal AI coach. Extract only information from the user's latest message that is genuinely useful for future coaching. Do NOT save temporary moods, one-off plans, transient circumstances, sensitive medical information, legal case details, financial account details, passwords, or other secrets. Prefer durable preferences, goals, values, routines, recurring patterns, relationship preferences, coaching preferences, constraints, and meaningful insights the user appears to want the coach to remember.
+
+Return ONLY a JSON array. Each item must have:
+{"category":"preference|goal|value|pattern|insight|relationship|routine|constraint|other","content":"one concise memory written as a fact about the user","importance":1-5}
+
+Return [] when nothing is durable enough to remember. Maximum 3 memories. Do not duplicate an existing memory. Never infer facts that the user did not state.`;
+
+function extractText(data: any) {
+  return data.output_text || data.output
+    ?.filter((item: any) => item?.type === "message")
+    ?.flatMap((item: any) => item.content || [])
+    ?.filter((content: any) => content?.type === "output_text" && typeof content.text === "string")
+    ?.map((content: any) => content.text)
+    ?.join("\n") || "";
+}
+
 export async function POST(req: Request) {
   try {
     const supabase = await createClient();
@@ -106,19 +121,55 @@ export async function POST(req: Request) {
       return Response.json({ error: detail }, { status: 502 });
     }
 
-    const text = data.output_text || data.output
-      ?.filter((item: any) => item?.type === "message")
-      ?.flatMap((item: any) => item.content || [])
-      ?.filter((content: any) => content?.type === "output_text" && typeof content.text === "string")
-      ?.map((content: any) => content.text)
-      ?.join("\n") || "";
-
+    const text = extractText(data);
     if (!text.trim()) return Response.json({ error: "The AI returned no text. Please try again." }, { status: 502 });
 
-    await supabase.from("coach_messages").insert([
-      { user_id: user.id, role: "user", content: messages.at(-1)?.content || "" },
+    const userContent = String(messages.at(-1)?.content || "");
+    const { data: savedMessages } = await supabase.from("coach_messages").insert([
+      { user_id: user.id, role: "user", content: userContent },
       { user_id: user.id, role: "assistant", content: text },
-    ]);
+    ]).select("id,role").order("created_at", { ascending: true });
+
+    // Automatically form durable memories from meaningful user statements.
+    // This is deliberately conservative: most messages should produce no memory.
+    if (userContent.trim().length >= 20) {
+      try {
+        const memoryResponse = await fetch("https://api.openai.com/v1/responses", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${process.env.OPENAI_API_KEY}` },
+          body: JSON.stringify({
+            model: process.env.OPENAI_MEMORY_MODEL || "gpt-5-mini",
+            instructions: MEMORY_SYSTEM + "\n\nEXISTING MEMORIES:\n" + JSON.stringify((memories || []).map((m: any) => m.content)),
+            input: [{ role: "user", content: userContent }],
+            max_output_tokens: 300,
+          }),
+        });
+        const memoryData = await memoryResponse.json().catch(() => ({}));
+        if (memoryResponse.ok) {
+          const raw = extractText(memoryData).trim().replace(/^```json\s*/i, "").replace(/```$/i, "").trim();
+          const candidates = JSON.parse(raw);
+          if (Array.isArray(candidates)) {
+            const sourceMessageId = savedMessages?.find((m: any) => m.role === "user")?.id || null;
+            const valid = candidates.filter((m: any) =>
+              m && typeof m.content === "string" && m.content.trim() &&
+              typeof m.category === "string" && typeof m.importance === "number" &&
+              m.importance >= 1 && m.importance <= 5
+            ).slice(0, 3);
+            if (valid.length) {
+              await supabase.from("coach_memories").insert(valid.map((m: any) => ({
+                user_id: user.id,
+                category: m.category,
+                content: m.content.trim(),
+                importance: Math.round(m.importance),
+                source_message_id: sourceMessageId,
+              })));
+            }
+          }
+        }
+      } catch (memoryError) {
+        console.error("Memory formation skipped:", memoryError);
+      }
+    }
 
     return Response.json({ message: text });
   } catch (error) {
