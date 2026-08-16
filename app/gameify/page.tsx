@@ -46,6 +46,18 @@ export default function GameifyPage() {
   const level = Math.floor(points / 25) + 1;
   const levelProgress = points % 25;
 
+  useEffect(() => {
+    // Make the Android/browser Back action deterministic on this screen.
+    // We add a same-page history entry so Back first exits Momentum to Today,
+    // rather than taking the user to whichever page happened to precede it.
+    window.history.pushState({ momentumExit: true }, "", window.location.href);
+    const handleBack = () => {
+      window.location.replace("/");
+    };
+    window.addEventListener("popstate", handleBack);
+    return () => window.removeEventListener("popstate", handleBack);
+  }, []);
+
   async function load() {
     const { data: auth } = await supabase.auth.getUser();
     if (!auth.user) return;
