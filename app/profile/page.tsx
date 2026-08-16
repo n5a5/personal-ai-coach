@@ -40,6 +40,7 @@ export default function ProfilePage() {
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(true);
   const [backupBusy, setBackupBusy] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -69,6 +70,18 @@ export default function ProfilePage() {
     if (!user) return router.replace("/login");
     const { error } = await supabase.from("profiles").upsert({ id:user.id, display_name:displayName, ...profile, updated_at:new Date().toISOString() });
     setStatus(error ? error.message : "Saved. Your coach can use this context.");
+  }
+
+  async function signOut() {
+    if (signingOut) return;
+    setSigningOut(true);
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      setStatus(error.message);
+      setSigningOut(false);
+      return;
+    }
+    router.replace("/login");
   }
 
   async function downloadBackup() {
@@ -122,6 +135,13 @@ export default function ProfilePage() {
       <h2 style={{fontSize:24,margin:"8px 0"}}>Protect your coach.</h2>
       <p style={{margin:"0 0 14px",lineHeight:1.5,opacity:.7}}>Download your profile, journal, coaching history, points, plans, identity loops and other personal coach data as a private JSON backup. Passwords and authentication tokens are never included.</p>
       <button onClick={downloadBackup} disabled={backupBusy} style={{width:"100%",border:"1px solid #ccc",borderRadius:12,padding:14,background:"#f7f7f5",fontWeight:700,cursor:backupBusy?"wait":"pointer"}}>{backupBusy ? "Creating backup…" : "Download my backup"}</button>
+    </section>
+
+    <section style={{background:"white",borderRadius:20,padding:24,marginTop:28,border:"1px solid #e5e5e5"}}>
+      <div style={{fontSize:13,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",opacity:.55}}>Account</div>
+      <h2 style={{fontSize:24,margin:"8px 0"}}>Sign out</h2>
+      <p style={{margin:"0 0 14px",lineHeight:1.5,opacity:.7}}>Sign out of your Personal AI Coach account on this device.</p>
+      <button onClick={signOut} disabled={signingOut} style={{width:"100%",border:"1px solid #ccc",borderRadius:12,padding:14,background:"#f7f7f5",fontWeight:700,cursor:signingOut?"wait":"pointer"}}>{signingOut ? "Signing out…" : "Sign out"}</button>
     </section>
   </main>;
 }
