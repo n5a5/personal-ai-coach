@@ -12,6 +12,68 @@ function localDate() {
   return `${y}-${m}-${d}`;
 }
 
+function renderCoachMessage(message: string) {
+  const lines = message.split(/\r?\n/);
+  const blocks: React.ReactNode[] = [];
+  let paragraph: string[] = [];
+  let list: string[] = [];
+
+  const flushParagraph = () => {
+    if (!paragraph.length) return;
+    blocks.push(
+      <p key={`p-${blocks.length}`} className="coach-paragraph">
+        {paragraph.join(" ")}
+      </p>,
+    );
+    paragraph = [];
+  };
+
+  const flushList = () => {
+    if (!list.length) return;
+    blocks.push(
+      <ul key={`ul-${blocks.length}`} className="coach-list">
+        {list.map((item, index) => <li key={index}>{item}</li>)}
+      </ul>,
+    );
+    list = [];
+  };
+
+  lines.forEach((rawLine) => {
+    const line = rawLine.trim();
+    if (!line) {
+      flushParagraph();
+      flushList();
+      return;
+    }
+
+    const heading = line.match(/^#{1,4}\s*(?:\d+\.\s*)?(.+)$/);
+    if (heading) {
+      flushParagraph();
+      flushList();
+      blocks.push(
+        <h2 key={`h-${blocks.length}`} className="coach-section-heading">
+          {heading[1].replace(/\s*[—:-]\s*$/, "")}
+        </h2>,
+      );
+      return;
+    }
+
+    const bullet = line.match(/^(?:[-*•]|\d+\.)\s+(.+)$/);
+    if (bullet) {
+      flushParagraph();
+      list.push(bullet[1]);
+      return;
+    }
+
+    flushList();
+    paragraph.push(line);
+  });
+
+  flushParagraph();
+  flushList();
+  return blocks;
+}
+
 export default function MorningPage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -64,7 +126,7 @@ export default function MorningPage() {
           </div>
         ) : (
           <>
-            <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.65, fontSize: 17 }}>{message}</div>
+            <div className="coach-message">{renderCoachMessage(message)}</div>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 24 }}>
               <button onClick={buildMorning} style={secondaryButton}>Rebuild my day</button>
               <Link href="/coach" style={{ ...secondaryButton, textDecoration: "none" }}>Talk to my coach</Link>
@@ -80,6 +142,27 @@ export default function MorningPage() {
           You don't need to solve your whole life this morning. You need to make the next good decision.
         </p>
       </section>
+
+      <style jsx>{`
+        .coach-message { font-size: 17px; line-height: 1.7; }
+        .coach-paragraph { margin: 0 0 22px; }
+        .coach-section-heading {
+          margin: 30px 0 10px;
+          font-size: 13px;
+          line-height: 1.3;
+          letter-spacing: 1.4px;
+          font-weight: 800;
+          text-transform: uppercase;
+          opacity: .55;
+        }
+        .coach-section-heading:first-child { margin-top: 0; }
+        .coach-list { margin: 0 0 22px; padding-left: 22px; }
+        .coach-list li { margin: 7px 0; }
+        @media (max-width: 640px) {
+          .coach-message { font-size: 16px; line-height: 1.65; }
+          .coach-section-heading { margin-top: 26px; }
+        }
+      `}</style>
     </main>
   );
 }
