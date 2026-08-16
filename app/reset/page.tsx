@@ -48,6 +48,7 @@ export default function ResetPage() {
   const selectedEmotion = emotion === null ? null : emotions[emotion];
 
   function next() {
+    setNote("");
     if (step < steps.length - 1) setStep(s => s + 1);
     else setComplete(true);
   }

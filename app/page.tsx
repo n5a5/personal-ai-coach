@@ -75,7 +75,7 @@ export default function Home() {
       const todayStart = localDayStartIso();
       const [{ data: log }, { data: txs }, { data: ruleRows }, { data: events }, planResponse] = await Promise.all([
         supabase.from("daily_logs").select("mood, gratitude").eq("user_id", userData.user.id).eq("log_date", today).maybeSingle(),
-        supabase.from("point_transactions").select("amount, reason, created_at").eq("user_id", userData.user.id),
+        supabase.from("point_transactions").select("amount, reason, created_at, event_date").eq("user_id", userData.user.id),
         supabase.from("gameify_rules").select("id,name").eq("user_id", userData.user.id).eq("active", true),
         supabase.from("gameify_events").select("rule_id").eq("user_id", userData.user.id).eq("event_date", today),
         fetch(`/api/daily-plan?date=${today}`, { cache: "no-store" }).catch(() => null),
@@ -84,7 +84,7 @@ export default function Home() {
       setPoints((txs || []).reduce((sum, row) => sum + row.amount, 0));
       setRules(Object.fromEntries((ruleRows || []).map(r => [r.name.toLowerCase(), r.id])));
       const eventIds = new Set((events || []).map(e => e.rule_id));
-      const todayReasons = new Set((txs || []).filter(row => row.created_at >= todayStart && (row.reason === "Daily check-in" || row.reason === "Gratitude")).map(row => row.reason));
+      const todayReasons = new Set((txs || []).filter(row => (row.event_date === today && (row.reason === "Daily check-in" || row.reason === "Gratitude")) || (row.event_date == null && row.created_at >= todayStart && (row.reason === "Gratitude"))).map(row => row.reason));
       setEarned((ruleRows || []).filter(r => eventIds.has(r.id)).map(r => r.name));
       if (todayReasons.has("Daily check-in")) setCheckInSaved(true);
       if (todayReasons.has("Gratitude")) setGratitudeSaved(true);
@@ -109,9 +109,9 @@ export default function Home() {
     const todayStart = localDayStartIso();
     const { error } = await supabase.from("daily_logs").upsert({ user_id: data.user.id, log_date: today, mood, gratitude }, { onConflict: "user_id,log_date" });
     if (error) { setMessage(error.message); setSavingCheckIn(false); return; }
-    const { data: existing } = await supabase.from("point_transactions").select("id").eq("user_id", data.user.id).eq("reason", "Daily check-in").gte("created_at", todayStart).maybeSingle();
+    const { data: existing } = await supabase.from("point_transactions").select("id").eq("user_id", data.user.id).eq("reason", "Daily check-in").eq("event_date", today).maybeSingle();
     if (!existing) {
-      const { error: pointError } = await supabase.from("point_transactions").insert({ user_id: data.user.id, amount: 1, reason: "Daily check-in" });
+      const { error: pointError } = await supabase.from("point_transactions").insert({ user_id: data.user.id, amount: 1, reason: "Daily check-in", event_date: today });
       if (pointError) { setMessage(pointError.message); setSavingCheckIn(false); return; }
       setPoints(p => p + 1);
     }
