@@ -130,8 +130,6 @@ export default function Home() {
     setMessage(name === "Alcohol" ? `−4 points · Drink ${alcoholToday + 1} today.` : `${Math.abs(value)} points spent.`);
   }
 
-  async function signOut() { await supabase.auth.signOut(); router.replace("/login"); }
-
   if (loading) return <main className="today-page-loading">Loading your coach…</main>;
 
   return <main className="today-page">
@@ -181,14 +179,9 @@ export default function Home() {
       </div>
     </section>
 
-    <div className="today-signout-wrap">
-      <button className="signout-button" onClick={signOut}>Sign out</button>
-    </div>
-
     {showGameify && <div role="dialog" aria-modal="true" className="gameify-modal"><div className="gameify-panel"><div className="gameify-head"><div><div className="today-card-eyebrow">MOMENTUM</div><h2>Build momentum. Spend intentionally.</h2></div><button className="modal-close" onClick={() => setShowGameify(false)} aria-label="Close">×</button></div><p>Points reinforce behaviors that make your life better. Discretionary choices have an opportunity cost.</p><h3>Earn</h3>{actions.map(a => <button key={a.name} onClick={() => award(a.name, a.points, a.key)} disabled={earned.includes(a.key)} className={`gameify-row ${earned.includes(a.key) ? "earned" : ""}`}><b>{a.icon} {a.name}</b><span>{a.detail}</span><strong>+{a.points}</strong></button>)}<h3>Spend</h3>{costs.map(c => <button key={c.name} onClick={() => spend(c.name, c.points)} disabled={points < Math.abs(c.points)} className="gameify-row"><b>{c.icon} {c.name}</b><span>{c.detail}</span><strong>{c.points}</strong>{c.name === "Alcohol" && <small>Today: {alcoholToday} drink{alcoholToday === 1 ? "" : "s"} · {alcoholToday * 4} points spent</small>}</button>)}<div className="gameify-balance">Balance: {points} points · Level {level}</div></div></div>}
 
     <style jsx>{`
-      .today-signout-wrap { display: flex; justify-content: flex-end; margin-top: 24px; }
       @media (max-width: 640px) {
         .today-header { align-items: flex-start; gap: 10px; }
         .today-title-group { min-width: 0; flex: 1 1 auto; }
@@ -196,7 +189,6 @@ export default function Home() {
         .momentum-tile { width: 150px; min-width: 0; max-width: 100%; padding: 12px 14px; overflow: hidden; }
         .momentum-points { font-size: 24px; white-space: nowrap; }
         .momentum-sub { white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
-        .today-signout-wrap { justify-content: flex-start; margin-top: 20px; }
       }
     `}</style>
   </main>;
