@@ -21,6 +21,8 @@ type State = {
   positiveLoops: string[];
 };
 
+type PlanItem = { id: string; title?: string; text?: string; detail?: string; completed?: boolean; done?: boolean };
+
 const empty: State = { win: "", lesson: "", letGo: "", note: "", positiveLoops: ["", "", ""] };
 
 const fields = [
@@ -30,6 +32,8 @@ const fields = [
   ["note", "What matters tomorrow?", "One important thing worth carrying forward. Keep it concrete and small."],
 ] as const;
 
+const labels: Record<string, string> = { body: "BODY", mind: "MIND", important: "IMPORTANT", life: "LIFE" };
+
 export default function EveningPage() {
   const supabase = createClient();
   const router = useRouter();
@@ -38,14 +42,19 @@ export default function EveningPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [message, setMessage] = useState("");
+  const [planItems, setPlanItems] = useState<PlanItem[]>([]);
 
   useEffect(() => {
     async function load() {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) { router.replace("/login"); return; }
-      const { data, error } = await supabase.from("daily_logs")
-        .select("evening_win,evening_lesson,evening_let_go,evening_note,evening_positive_loops,evening_completed")
-        .eq("user_id", userData.user.id).eq("log_date", localDate()).maybeSingle();
+      const today = localDate();
+      const [{ data, error }, planResponse] = await Promise.all([
+        supabase.from("daily_logs")
+          .select("evening_win,evening_lesson,evening_let_go,evening_note,evening_positive_loops,evening_completed")
+          .eq("user_id", userData.user.id).eq("log_date", today).maybeSingle(),
+        fetch(`/api/daily-plan?date=${today}`, { cache: "no-store" }).catch(() => null),
+      ]);
       if (error) { setMessage(error.message); }
       if (data) {
         setState({
@@ -56,6 +65,11 @@ export default function EveningPage() {
           positiveLoops: Array.from({ length: 3 }, (_, i) => data.evening_positive_loops?.[i] || ""),
         });
         setSaved(Boolean(data.evening_completed));
+      }
+      if (planResponse?.ok) {
+        const planData = await planResponse.json().catch(() => ({}));
+        const items = Array.isArray(planData?.plan?.items) ? planData.plan.items : [];
+        setPlanItems(items.filter((item: PlanItem) => item?.id));
       }
       setLoading(false);
     }
@@ -113,6 +127,8 @@ export default function EveningPage() {
 
   if (loading) return <main style={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>Loading your evening journal…</main>;
 
+  const completedCount = planItems.filter(item => Boolean(item.completed ?? item.done)).length;
+
   return (
     <main className="evening-page" style={{ maxWidth: 760, margin: "0 auto", padding: "30px 20px 100px" }}>
       <header style={{ marginBottom: 22 }}>
@@ -121,6 +137,31 @@ export default function EveningPage() {
         <h1 style={{ fontSize: 48, lineHeight: 1.02, letterSpacing: -1.5, margin: "8px 0 12px" }}>Close the loop.</h1>
         <p style={{ fontSize: 19, lineHeight: 1.5, color: "#666", margin: 0 }}>Capture the evidence, reinforce what is working, release what can wait, and give tomorrow a better starting point.</p>
       </header>
+
+      {planItems.length > 0 && (
+        <section style={{ background: "white", border: "1px solid #e7e5e0", borderRadius: 20, padding: 20, marginBottom: 16 }} aria-label="Today's morning commitments">
+          <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 1.5, color: "#666" }}>MORNING → EVENING</div>
+          <h2 style={{ fontSize: 25, lineHeight: 1.2, margin: "7px 0 5px" }}>What did you actually follow through on?</h2>
+          <p style={{ color: "#666", margin: "0 0 14px", lineHeight: 1.45 }}>{completedCount} of {planItems.length} morning commitments completed. This is feedback, not a grade.</p>
+          <div style={{ display: "grid", gap: 8 }}>
+            {planItems.map(item => {
+              const done = Boolean(item.completed ?? item.done);
+              return (
+                <div key={item.id} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "10px 11px", borderRadius: 12, background: done ? "#f4f1e9" : "#f7f7f5", border: "1px solid #e7e5e0" }}>
+                  <span aria-hidden="true" style={{ width: 22, height: 22, borderRadius: "50%", display: "grid", placeItems: "center", background: done ? "#171717" : "white", color: done ? "white" : "#777", border: done ? 0 : "1px solid #cfcfc9", flex: "0 0 auto", fontWeight: 800 }}>{done ? "✓" : ""}</span>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1.1, color: "#777", marginBottom: 2 }}>{labels[item.id] || item.title || item.id}</div>
+                    <div style={{ lineHeight: 1.4, textDecoration: done ? "none" : "none" }}>{item.detail || item.text || item.title}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ marginTop: 14, padding: 12, borderRadius: 12, background: "#171717", color: "white", lineHeight: 1.45 }}>
+            <strong>Look for the pattern.</strong> What made the completed actions easier? What got in the way of the unfinished ones?
+          </div>
+        </section>
+      )}
 
       <section style={{ background: "#171717", color: "white", borderRadius: 22, padding: 24, marginBottom: 16 }}>
         <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 1.4, opacity: .6 }}>THE RULE</div>
