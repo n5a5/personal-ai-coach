@@ -1,16 +1,8 @@
 /* Today page geometry: keep major surfaces aligned and reduce dead space. */
-body:has(.today-page) > .morning-launch,
 body:has(.today-page) > .todays-plan {
   width: calc(100% - 40px);
   max-width: 980px;
   box-sizing: border-box;
-}
-
-body:has(.today-page) > .morning-launch {
-  margin-top: 8px;
-}
-
-body:has(.today-page) > .todays-plan {
   margin-top: 12px;
 }
 
@@ -41,17 +33,9 @@ body:has(.today-page) > .todays-plan {
     padding-bottom: 24px !important;
   }
 
-  body:has(.today-page) > .morning-launch,
   body:has(.today-page) > .todays-plan {
     width: calc(100% - 28px);
     max-width: none;
-  }
-
-  body:has(.today-page) > .morning-launch {
-    margin-top: 8px;
-  }
-
-  body:has(.today-page) > .todays-plan {
     margin-top: 12px;
   }
 
