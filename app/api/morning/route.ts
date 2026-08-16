@@ -31,16 +31,30 @@ Return a concise plan with exactly these sections:
 
 Be direct, warm, and personal. The user should finish reading knowing exactly what to do first.`;
 
+const FALLBACK_ITEMS = [
+  { id: "body", title: "BODY", detail: "Move your body — choose the workout that makes today better.", completed: false },
+  { id: "mind", title: "MIND", detail: "Protect your mind — take a deliberate reset or quiet 5 minutes.", completed: false },
+  { id: "important", title: "IMPORTANT", detail: "Move one important thing forward — choose the uncomfortable action that matters.", completed: false },
+  { id: "life", title: "LIFE", detail: "Be present with family — give them your full attention for one meaningful moment.", completed: false },
+];
+
 function extractText(data: any) {
   return data.output_text || data.output?.filter((item: any) => item?.type === "message")?.flatMap((item: any) => item.content || [])?.filter((content: any) => content?.type === "output_text" && typeof content.text === "string")?.map((content: any) => content.text)?.join("\n") || "";
 }
 
 function buildItems(text: string) {
   const sections = [["body", "BODY"], ["mind", "MIND"], ["important", "IMPORTANT"], ["life", "LIFE"]] as const;
-  return sections.map(([id, heading]) => {
+  const generated = sections.map(([id, heading]) => {
     const match = text.match(new RegExp(`(?:^|\\n)\\s*(?:\\d+\\.\\s*)?${heading}\\s*[—:-]\\s*(.+?)(?=\\n\\s*(?:\\d+\\.\\s*)?(?:BODY|MIND|IMPORTANT|LIFE|LET GO OF|FIRST MOVE)\\s*[—:-]|$)`, "is"));
     return { id, title: heading, detail: (match?.[1] || "").trim(), completed: false };
-  }).filter(item => item.detail);
+  });
+
+  // Never save an empty or partially parsed daily plan. If the model's formatting
+  // changes, keep the app usable and preserve the four intended categories.
+  return generated.map((item, index) => ({
+    ...item,
+    detail: item.detail || FALLBACK_ITEMS[index].detail,
+  }));
 }
 
 function completionSummary(plans: any[]) {
@@ -90,7 +104,7 @@ export async function POST(request: Request) {
     if (!text.trim()) return Response.json({ error: "The morning coach returned no text. Please try again." }, { status: 502 });
 
     const generatedItems = buildItems(text);
-    const previousItems = Array.isArray(existingToday?.items) ? existingToday.items : [];
+    const previousItems = Array.isArray(existingToday?.items) && existingToday.items.length ? existingToday.items : [];
     const items = generatedItems.map(item => {
       const previous = previousItems.find((old: any) => old?.id === item.id);
       return previous ? { ...item, completed: Boolean(previous.completed ?? previous.done) } : item;
