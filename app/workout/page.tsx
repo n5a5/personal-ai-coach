@@ -31,7 +31,7 @@ function renderMarkdown(text: string) {
 
 export default function WorkoutPage() {
   const [minutes, setMinutes] = useState(20);
-  const [focus, setFocus] = useState("Full body");
+  const [focus, setFocus] = useState<string[]>(["Full body"]);
   const [equipment, setEquipment] = useState("Bodyweight / no equipment");
   const [goal, setGoal] = useState("General fitness");
   const [intensity, setIntensity] = useState("Moderate");
@@ -47,15 +47,33 @@ export default function WorkoutPage() {
 
   const recent = useMemo(() => history.slice(-12).map(({ date, minutes, focus, equipment, goal, completed }) => ({ date, minutes, focus, equipment, goal, completed })), [history]);
 
+  function toggleFocus(value: string) {
+    if (value === "Full body") {
+      setFocus(["Full body"]);
+      return;
+    }
+    setFocus(prev => {
+      const withoutFullBody = prev.filter(x => x !== "Full body");
+      return withoutFullBody.includes(value)
+        ? withoutFullBody.filter(x => x !== value)
+        : [...withoutFullBody, value];
+    });
+  }
+
   async function generate() {
+    if (focus.length === 0) {
+      setError("Select at least one body/focus area.");
+      return;
+    }
     setLoading(true); setError(""); setCompleted(false);
     try {
       const res = await fetch("/api/workout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ minutes, focus, equipment, goal, intensity, recentWorkouts: recent }) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Unable to create workout.");
       setWorkout(data.workout);
-      const entry = { date: localDate(), minutes, focus, equipment, goal, workout: data.workout, completed: false };
-      const next = [...history.filter(x => !(x.date === entry.date && x.minutes === minutes && x.focus === focus)), entry].slice(-30);
+      const focusLabel = focus.join(", ");
+      const entry = { date: localDate(), minutes, focus: focusLabel, equipment, goal, workout: data.workout, completed: false };
+      const next = [...history.filter(x => !(x.date === entry.date && x.minutes === minutes && x.focus === focusLabel)), entry].slice(-30);
       setHistory(next); localStorage.setItem("workout_history", JSON.stringify(next));
     } catch (e) { setError(e instanceof Error ? e.message : "Unable to create workout."); }
     finally { setLoading(false); }
@@ -78,8 +96,9 @@ export default function WorkoutPage() {
         <label style={{ display: "block", fontWeight: 800, marginBottom: 10 }}>Time</label>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>{durations.map(n => <button key={n} onClick={() => setMinutes(n)} style={{ border: `1px solid ${minutes === n ? "#171717" : "#E7E5E0"}`, background: minutes === n ? "#171717" : "white", color: minutes === n ? "white" : "#171717", borderRadius: 999, padding: "9px 14px", fontWeight: 700 }}>{n} min</button>)}</div>
 
-        <label style={{ display: "block", fontWeight: 800, marginBottom: 10 }}>Body / focus</label>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>{focuses.map(x => <button key={x} onClick={() => setFocus(x)} style={{ border: `1px solid ${focus === x ? "#171717" : "#E7E5E0"}`, background: focus === x ? "#171717" : "white", color: focus === x ? "white" : "#171717", borderRadius: 999, padding: "9px 13px", fontWeight: 700 }}>{x}</button>)}</div>
+        <label style={{ display: "block", fontWeight: 800, marginBottom: 6 }}>Body / focus</label>
+        <p style={{ margin: "0 0 10px", color: "#6B6B6B", fontSize: 13 }}>Select one or more areas. Full body is exclusive.</p>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>{focuses.map(x => <button key={x} aria-pressed={focus.includes(x)} onClick={() => toggleFocus(x)} style={{ border: `1px solid ${focus.includes(x) ? "#171717" : "#E7E5E0"}`, background: focus.includes(x) ? "#171717" : "white", color: focus.includes(x) ? "white" : "#171717", borderRadius: 999, padding: "9px 13px", fontWeight: 700 }}>{x}</button>)}</div>
 
         <label style={{ display: "block", fontWeight: 800, marginBottom: 10 }}>Equipment</label>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))", gap: 8, marginBottom: 20 }}>{equipmentOptions.map(x => <button key={x} onClick={() => setEquipment(x)} style={{ textAlign: "left", border: `1px solid ${equipment === x ? "#171717" : "#E7E5E0"}`, background: equipment === x ? "#F2F0EB" : "white", borderRadius: 12, padding: 12, fontWeight: 700 }}>{x}</button>)}</div>
