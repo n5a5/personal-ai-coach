@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 const earnRules = [
@@ -33,6 +34,7 @@ function dateOffset(days: number) {
 }
 
 export default function GameifyPage() {
+  const router = useRouter();
   const supabase = createClient();
   const [points, setPoints] = useState(0);
   const [weekPoints, setWeekPoints] = useState(0);
@@ -47,16 +49,13 @@ export default function GameifyPage() {
   const levelProgress = points % 25;
 
   useEffect(() => {
-    // Make the Android/browser Back action deterministic on this screen.
-    // We add a same-page history entry so Back first exits Momentum to Today,
-    // rather than taking the user to whichever page happened to precede it.
+    // Add a same-URL history entry so Android/browser Back is handled here,
+    // rather than exiting the app or exposing an unrelated prior page.
     window.history.pushState({ momentumExit: true }, "", window.location.href);
-    const handleBack = () => {
-      window.location.replace("/");
-    };
-    window.addEventListener("popstate", handleBack);
-    return () => window.removeEventListener("popstate", handleBack);
-  }, []);
+    const onPopState = () => router.replace("/");
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [router]);
 
   async function load() {
     const { data: auth } = await supabase.auth.getUser();
@@ -121,7 +120,7 @@ export default function GameifyPage() {
   if (loading) return <main style={{ maxWidth: 900, margin: "0 auto", padding: 32 }}>Loading Momentum…</main>;
 
   return (
-    <main style={{ maxWidth: 980, margin: "0 auto", padding: "28px 20px 120px", color: "#171717" }}>
+    <main style={{ maxWidth: 980, margin: "0 auto", padding: "28px 20px 190px", color: "#171717" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 20, marginBottom: 24, flexWrap: "wrap", position: "relative" }}>
         <div style={{ paddingRight: 52 }}><div style={{ fontSize: 12, letterSpacing: 2, fontWeight: 800, color: "#6B6B6B" }}>MOMENTUM</div><h1 style={{ fontSize: 42, margin: "6px 0" }}>Build evidence.</h1><p style={{ margin: 0, color: "#6B6B6B" }}>The goal isn't points. The goal is becoming the person you want to be.</p></div>
         <Link href="/" aria-label="Close Momentum and return to Today" title="Close" style={{ position: "absolute", top: -4, right: 0, width: 44, height: 44, display: "grid", placeItems: "center", border: "1px solid #D8D4CC", borderRadius: "50%", textDecoration: "none", color: "#171717", background: "white", fontSize: 28, lineHeight: 1, fontWeight: 400, zIndex: 5 }}>×</Link>
