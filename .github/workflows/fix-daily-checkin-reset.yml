@@ -1,0 +1,61 @@
+name: Fix daily check-in and reset prompts
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.event.head_commit.message != 'Fix daily check-in timezone guard and reset prompt fields'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply fixes
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path('app/page.tsx')
+          s = p.read_text()
+          s = s.replace(
+              'supabase.from("point_transactions").select("amount, reason, created_at").eq("user_id", userData.user.id)',
+              'supabase.from("point_transactions").select("amount, reason, created_at, event_date").eq("user_id", userData.user.id)'
+          )
+          s = s.replace(
+              'const todayReasons = new Set((txs || []).filter(row => row.created_at >= todayStart && (row.reason === "Daily check-in" || row.reason === "Gratitude")).map(row => row.reason));',
+              'const todayReasons = new Set((txs || []).filter(row => (row.event_date === today && (row.reason === "Daily check-in" || row.reason === "Gratitude")) || (row.event_date == null && row.created_at >= todayStart && (row.reason === "Gratitude"))).map(row => row.reason));'
+          )
+          s = s.replace(
+              'const { data: existing } = await supabase.from("point_transactions").select("id").eq("user_id", data.user.id).eq("reason", "Daily check-in").gte("created_at", todayStart).maybeSingle();',
+              'const { data: existing } = await supabase.from("point_transactions").select("id").eq("user_id", data.user.id).eq("reason", "Daily check-in").eq("event_date", today).maybeSingle();'
+          )
+          s = s.replace(
+              'supabase.from("point_transactions").insert({ user_id: data.user.id, amount: 1, reason: "Daily check-in" })',
+              'supabase.from("point_transactions").insert({ user_id: data.user.id, amount: 1, reason: "Daily check-in", event_date: today })'
+          )
+          p.write_text(s)
+
+          p = Path('app/reset/page.tsx')
+          s = p.read_text()
+          old = '''  function next() {\n    if (step < steps.length - 1) setStep(s => s + 1);\n    else setComplete(true);\n  }'''
+          new = '''  function next() {\n    setNote("");\n    if (step < steps.length - 1) setStep(s => s + 1);\n    else setComplete(true);\n  }'''
+          if old not in s:
+              raise SystemExit('Reset next() pattern not found')
+          s = s.replace(old, new)
+          p.write_text(s)
+          PY
+
+      - name: Commit fixes and remove temporary workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/page.tsx app/reset/page.tsx
+          git rm .github/workflows/fix-daily-checkin-reset.yml
+          git commit -m "Fix daily check-in timezone guard and reset prompt fields"
+          git push
