@@ -49,8 +49,6 @@ export default function GameifyPage() {
   const levelProgress = points % 25;
 
   useEffect(() => {
-    // Add a same-URL history entry so Android/browser Back is handled here,
-    // rather than exiting the app or exposing an unrelated prior page.
     window.history.pushState({ momentumExit: true }, "", window.location.href);
     const onPopState = () => router.replace("/");
     window.addEventListener("popstate", onPopState);
@@ -123,8 +121,11 @@ export default function GameifyPage() {
     <main style={{ maxWidth: 980, margin: "0 auto", padding: "28px 20px 190px", color: "#171717" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 20, marginBottom: 24, flexWrap: "wrap", position: "relative" }}>
         <div style={{ paddingRight: 52 }}><div style={{ fontSize: 12, letterSpacing: 2, fontWeight: 800, color: "#6B6B6B" }}>MOMENTUM</div><h1 style={{ fontSize: 42, margin: "6px 0" }}>Build evidence.</h1><p style={{ margin: 0, color: "#6B6B6B" }}>The goal isn't points. The goal is becoming the person you want to be.</p></div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <Link href="/workout" style={{ border: "1px solid #D8D4CC", borderRadius: 999, padding: "10px 16px", textDecoration: "none", color: "#171717", background: "white", fontWeight: 700 }}>Workout Coach →</Link>
+          <Link href="/weekly" style={{ border: "1px solid #D8D4CC", borderRadius: 999, padding: "10px 16px", textDecoration: "none", color: "#171717", background: "white", fontWeight: 700 }}>Weekly review →</Link>
+        </div>
         <Link href="/" aria-label="Close Momentum and return to Today" title="Close" style={{ position: "absolute", top: -4, right: 0, width: 44, height: 44, display: "grid", placeItems: "center", border: "1px solid #D8D4CC", borderRadius: "50%", textDecoration: "none", color: "#171717", background: "white", fontSize: 28, lineHeight: 1, fontWeight: 400, zIndex: 5 }}>×</Link>
-        <Link href="/weekly" style={{ border: "1px solid #D8D4CC", borderRadius: 999, padding: "10px 16px", textDecoration: "none", color: "#171717", background: "white", fontWeight: 700 }}>Weekly review →</Link>
       </div>
 
       <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 12, marginBottom: 24 }}>
