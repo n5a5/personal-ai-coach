@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 const affirmation = "If you are distressed by anything external, the pain is not due to the thing itself, but to your estimate of it; and this you have the power to revoke at any moment.";
 const actions = [
+  { name: "Workout — 5 min", detail: "Complete at least a 5-minute workout or deliberate movement session.", points: 1, icon: "💪", key: "Workout" },
   { name: "Workout — 20–30 min", detail: "Complete a 20–30 minute workout.", points: 4, icon: "💪", key: "Workout" },
   { name: "Workout — 45–60 min", detail: "Complete a 45–60 minute workout.", points: 8, icon: "💪", key: "Workout" },
   { name: "Family Connection", detail: "Intentional time with wife or kids.", points: 3, icon: "❤️", key: "Family Connection" },
@@ -151,16 +152,6 @@ export default function Home() {
     <section className="today-anchor">
       <div className="today-anchor-eyebrow">TODAY&apos;S PRINCIPLE</div>
       <p>{affirmation}</p>
-    </section>
-
-    <section className="today-entry-row">
-      <a className="reset-entry" href="/reset">
-        <div className="reset-entry-icon">↻</div>
-        <div>
-          <div className="reset-entry-title">Reset</div>
-          <div className="reset-entry-copy">Feeling anxious, overloaded, angry, stuck, or off? Reset and return to your life.</div>
-        </div>
-      </a>
     </section>
 
     <section className="today-journal-grid">
