@@ -1,21 +1,7 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-
+// Morning Coach is intentionally launched from Today's Plan.
+// Keeping this component as a no-op avoids duplicate CTAs on the Today page.
 export default function MorningLaunch() {
-  const pathname = usePathname();
-  if (pathname !== "/") return null;
-
-  return (
-    <div className="morning-launch">
-      <Link href="/morning" className="morning-launch-card">
-        <div className="morning-launch-eyebrow">MORNING COACH</div>
-        <div className="morning-launch-title">Build today's plan with your Coach →</div>
-        <div className="morning-launch-copy">
-          Based on your goals, memories, recent life and what matters most today.
-        </div>
-      </Link>
-    </div>
-  );
+  return null;
 }
