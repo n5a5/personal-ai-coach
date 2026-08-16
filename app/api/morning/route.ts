@@ -6,6 +6,7 @@ The purpose is not maximum productivity. The purpose is to make today a genuinel
 
 Priorities:
 - Start with the person's current state, not an idealized schedule.
+- Treat the behavioral insight from the previous day as feedback, not a verdict. Use it to make today's plan more concrete and adaptive.
 - Use the previous evening reflection as behavioral feedback. If the user identified a lesson, let-go item, or priority, carry it forward naturally when relevant.
 - Use the identity loop as an identity-to-action bridge. If recent entries show a repeated identity or a specific proof commitment, make today's plan include a small action that can create evidence for that identity. Do not turn the identity exercise into a score or a guilt mechanism.
 - Keep the plan small: one BODY action, one MIND action, one IMPORTANT action, and one RELATIONSHIP/LIFE action.
@@ -31,6 +32,10 @@ Return a concise plan with exactly these sections:
 
 Be direct, warm, and personal. The user should finish reading knowing exactly what to do first.`;
 
+const INSIGHT_SYSTEM = `You are the behavioral analyst inside a personal coaching app. Analyze the user's most recent completed day using their planned actions, what they actually completed, and their evening reflection. Produce exactly ONE concise behavioral insight (1-2 sentences, max 45 words).
+
+Identify a useful pattern about what helped, what got in the way, or what should change tomorrow. Prefer specific evidence over motivational language. Never shame the user. Do not diagnose. Do not make unsupported claims. If evidence is weak, say what is tentatively suggested rather than pretending certainty.`;
+
 const FALLBACK_ITEMS = [
   { id: "body", title: "BODY", detail: "Move your body — choose the workout that makes today better.", completed: false },
   { id: "mind", title: "MIND", detail: "Protect your mind — take a deliberate reset or quiet 5 minutes.", completed: false },
@@ -48,13 +53,7 @@ function buildItems(text: string) {
     const match = text.match(new RegExp(`(?:^|\\n)\\s*(?:\\d+\\.\\s*)?${heading}\\s*[—:-]\\s*(.+?)(?=\\n\\s*(?:\\d+\\.\\s*)?(?:BODY|MIND|IMPORTANT|LIFE|LET GO OF|FIRST MOVE)\\s*[—:-]|$)`, "is"));
     return { id, title: heading, detail: (match?.[1] || "").trim(), completed: false };
   });
-
-  // Never save an empty or partially parsed daily plan. If the model's formatting
-  // changes, keep the app usable and preserve the four intended categories.
-  return generated.map((item, index) => ({
-    ...item,
-    detail: item.detail || FALLBACK_ITEMS[index].detail,
-  }));
+  return generated.map((item, index) => ({ ...item, detail: item.detail || FALLBACK_ITEMS[index].detail }));
 }
 
 function completionSummary(plans: any[]) {
@@ -63,6 +62,20 @@ function completionSummary(plans: any[]) {
     const completed = items.filter((item: any) => Boolean(item?.completed ?? item?.done)).length;
     return { date: plan.plan_date, completed, total: items.length, percent: items.length ? Math.round((completed / items.length) * 100) : 0, items: items.map((item: any) => ({ category: item?.id, completed: Boolean(item?.completed ?? item?.done), text: item?.detail || item?.text || item?.title || "" })) };
   });
+}
+
+async function generateBehavioralInsight(context: string) {
+  try {
+    const response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${process.env.OPENAI_API_KEY}` },
+      body: JSON.stringify({ model: process.env.OPENAI_MODEL || "gpt-5.6", instructions: INSIGHT_SYSTEM, input: [{ role: "user", content: "Analyze this recent-day coaching context and return one behavioral insight:\n" + context }], max_output_tokens: 120 }),
+    });
+    if (!response.ok) return "";
+    return extractText(await response.json().catch(() => ({}))).trim();
+  } catch {
+    return "";
+  }
 }
 
 export async function POST(request: Request) {
@@ -78,7 +91,7 @@ export async function POST(request: Request) {
 
     const [{ data: profile }, { data: recent }, { data: memories }, { data: history }, { data: recentPlans }, { data: existingToday }, { data: identityLoops }] = await Promise.all([
       supabase.from("profiles").select("display_name,values,vision,goals,motivations,challenges,coaching_style,identity_statement").eq("id", user.id).maybeSingle(),
-      supabase.from("daily_logs").select("log_date,mood,energy,gratitude,focus,controllable,uncontrollable,intention,evening_win,evening_lesson,evening_let_go,evening_note,evening_completed").eq("user_id", user.id).order("log_date", { ascending: false }).limit(7),
+      supabase.from("daily_logs").select("log_date,mood,energy,gratitude,focus,controllable,uncontrollable,intention,evening_win,evening_lesson,evening_let_go,evening_note,evening_completed,evening_positive_loops").eq("user_id", user.id).order("log_date", { ascending: false }).limit(7),
       supabase.from("coach_memories").select("category,content,importance,updated_at").eq("user_id", user.id).order("importance", { ascending: false }).order("updated_at", { ascending: false }).limit(40),
       supabase.from("coach_messages").select("role,content,created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(24),
       supabase.from("daily_plans").select("plan_date,title,items,source,updated_at").eq("user_id", user.id).order("plan_date", { ascending: false }).limit(7),
@@ -86,12 +99,21 @@ export async function POST(request: Request) {
       supabase.from("identity_loops").select("loop_date,identity_key,identity_title,repetitions,proof").eq("user_id", user.id).order("loop_date", { ascending: false }).limit(21),
     ]);
 
-    const context = JSON.stringify({ today, profile: profile || {}, durable_memories: memories || [], recent_daily_logs: recent || [], identity_loop_history: identityLoops || [], recent_coach_history: (history || []).reverse(), recent_daily_plan_completion: completionSummary(recentPlans || []) });
+    const contextData = { today, profile: profile || {}, durable_memories: memories || [], recent_daily_logs: recent || [], identity_loop_history: identityLoops || [], recent_coach_history: (history || []).reverse(), recent_daily_plan_completion: completionSummary(recentPlans || []) };
+    const context = JSON.stringify(contextData);
+    const behavioralInsight = await generateBehavioralInsight(context);
+
+    if (behavioralInsight) {
+      await supabase.from("coach_memories").delete().eq("user_id", user.id).eq("category", "behavioral_insight").eq("source", "evening-reflection");
+      await supabase.from("coach_memories").insert({ user_id: user.id, category: "behavioral_insight", content: behavioralInsight, source: "evening-reflection", importance: 7 });
+    }
+
+    const enhancedContext = JSON.stringify({ ...contextData, latest_behavioral_insight: behavioralInsight || null });
 
     const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${process.env.OPENAI_API_KEY}` },
-      body: JSON.stringify({ model: process.env.OPENAI_MODEL || "gpt-5.6", instructions: MORNING_SYSTEM + "\n\nPERSISTENT USER CONTEXT:\n" + context, input: [{ role: "user", content: "It is morning. Build my plan for today based on what you know about me, including what I learned, what I actually followed through on recently, and the identity I am practicing." }], max_output_tokens: 750 }),
+      body: JSON.stringify({ model: process.env.OPENAI_MODEL || "gpt-5.6", instructions: MORNING_SYSTEM + "\n\nPERSISTENT USER CONTEXT:\n" + enhancedContext, input: [{ role: "user", content: "It is morning. Build my plan for today based on what you know about me, including what I learned, what I actually followed through on recently, and the identity I am practicing." }], max_output_tokens: 750 }),
     });
 
     const data = await response.json().catch(() => ({}));
@@ -113,7 +135,7 @@ export async function POST(request: Request) {
     const { error: planError } = await supabase.from("daily_plans").upsert({ user_id: user.id, plan_date: today, title: "Today's Plan", items, source: "morning-coach", updated_at: new Date().toISOString() }, { onConflict: "user_id,plan_date" });
     if (planError) console.error("Daily plan save error:", planError);
 
-    return Response.json({ message: text, plan: { plan_date: today, title: "Today's Plan", items } });
+    return Response.json({ message: text, behavioralInsight, plan: { plan_date: today, title: "Today's Plan", items } });
   } catch (error) {
     console.error("Morning coach error:", error);
     return Response.json({ error: "The morning coach encountered an unexpected error." }, { status: 500 });
