@@ -28,18 +28,28 @@ const costs = [
   { name: "Planned Indulgence", detail: "Spend points on a deliberate indulgence.", points: -2, icon: "🍔" },
 ];
 
+const APP_TIME_ZONE = "America/New_York";
+
 function localDate() {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, "0");
-  const d = String(now.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: APP_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map(p => [p.type, p.value]));
+  return `${values.year}-${values.month}-${values.day}`;
 }
 
-// Supabase stores created_at in UTC. Convert the user's local midnight to UTC
-// so "today" means the user's calendar day, not the UTC calendar day.
-function localDayStartIso(date = new Date()) {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0).toISOString();
+function transactionDate(createdAt: string) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: APP_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date(createdAt));
+  const values = Object.fromEntries(parts.map(p => [p.type, p.value]));
+  return `${values.year}-${values.month}-${values.day}`;
 }
 
 export default function Home() {
@@ -72,7 +82,6 @@ export default function Home() {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) { router.replace("/login"); return; }
       const today = localDate();
-      const todayStart = localDayStartIso();
       const [{ data: log }, { data: txs }, { data: ruleRows }, { data: events }, planResponse] = await Promise.all([
         supabase.from("daily_logs").select("mood, gratitude").eq("user_id", userData.user.id).eq("log_date", today).maybeSingle(),
         supabase.from("point_transactions").select("amount, reason, created_at, event_date").eq("user_id", userData.user.id),
@@ -84,11 +93,14 @@ export default function Home() {
       setPoints((txs || []).reduce((sum, row) => sum + row.amount, 0));
       setRules(Object.fromEntries((ruleRows || []).map(r => [r.name.toLowerCase(), r.id])));
       const eventIds = new Set((events || []).map(e => e.rule_id));
-      const todayReasons = new Set((txs || []).filter(row => (row.event_date === today && (row.reason === "Daily check-in" || row.reason === "Gratitude")) || (row.event_date == null && row.created_at >= todayStart && (row.reason === "Gratitude"))).map(row => row.reason));
+      const todayReasons = new Set((txs || []).filter(row => {
+        const rowDate = row.event_date || transactionDate(row.created_at);
+        return rowDate === today && (row.reason === "Daily check-in" || row.reason === "Gratitude");
+      }).map(row => row.reason));
       setEarned((ruleRows || []).filter(r => eventIds.has(r.id)).map(r => r.name));
       if (todayReasons.has("Daily check-in")) setCheckInSaved(true);
       if (todayReasons.has("Gratitude")) setGratitudeSaved(true);
-      setAlcoholToday((txs || []).filter(row => row.reason === "Alcohol" && row.created_at >= todayStart).length);
+      setAlcoholToday((txs || []).filter(row => row.reason === "Alcohol" && (row.event_date || transactionDate(row.created_at)) === today).length);
       if (planResponse?.ok) {
         const planData = await planResponse.json().catch(() => null);
         const important = planData?.plan?.items?.find((item: any) => item?.id === "important");
@@ -106,7 +118,6 @@ export default function Home() {
     const { data } = await supabase.auth.getUser();
     if (!data.user) { setSavingCheckIn(false); return router.replace("/login"); }
     const today = localDate();
-    const todayStart = localDayStartIso();
     const { error } = await supabase.from("daily_logs").upsert({ user_id: data.user.id, log_date: today, mood, gratitude }, { onConflict: "user_id,log_date" });
     if (error) { setMessage(error.message); setSavingCheckIn(false); return; }
     const { data: existing } = await supabase.from("point_transactions").select("id").eq("user_id", data.user.id).eq("reason", "Daily check-in").eq("event_date", today).maybeSingle();
@@ -127,12 +138,11 @@ export default function Home() {
     const { data } = await supabase.auth.getUser();
     if (!data.user) { setSavingGratitude(false); return router.replace("/login"); }
     const today = localDate();
-    const todayStart = localDayStartIso();
     const { error } = await supabase.from("daily_logs").upsert({ user_id: data.user.id, log_date: today, mood, gratitude }, { onConflict: "user_id,log_date" });
     if (error) { setMessage(error.message); setSavingGratitude(false); return; }
-    const { data: existing } = await supabase.from("point_transactions").select("id").eq("user_id", data.user.id).eq("reason", "Gratitude").gte("created_at", todayStart).maybeSingle();
+    const { data: existing } = await supabase.from("point_transactions").select("id").eq("user_id", data.user.id).eq("reason", "Gratitude").eq("event_date", today).maybeSingle();
     if (!existing) {
-      const { error: pointError } = await supabase.from("point_transactions").insert({ user_id: data.user.id, amount: 1, reason: "Gratitude" });
+      const { error: pointError } = await supabase.from("point_transactions").insert({ user_id: data.user.id, amount: 1, reason: "Gratitude", event_date: today });
       if (pointError) { setMessage(pointError.message); setSavingGratitude(false); return; }
       setPoints(p => p + 1);
     }
@@ -153,7 +163,7 @@ export default function Home() {
     if (existing) return;
     const { error: eventError } = await supabase.from("gameify_events").insert({ user_id: data.user.id, rule_id: ruleId, points: value });
     if (eventError) { setMessage(eventError.message); return; }
-    const { error } = await supabase.from("point_transactions").insert({ user_id: data.user.id, amount: value, reason: earnedKey });
+    const { error } = await supabase.from("point_transactions").insert({ user_id: data.user.id, amount: value, reason: earnedKey, event_date: today });
     if (error) { setMessage(error.message); return; }
     setPoints(p => p + value); setEarned(e => [...e, earnedKey]); setMessage(`+${value} points earned.`);
   }
@@ -162,7 +172,8 @@ export default function Home() {
     if (points < Math.abs(value)) return;
     const { data } = await supabase.auth.getUser();
     if (!data.user) return router.replace("/login");
-    const { error } = await supabase.from("point_transactions").insert({ user_id: data.user.id, amount: value, reason: name });
+    const today = localDate();
+    const { error } = await supabase.from("point_transactions").insert({ user_id: data.user.id, amount: value, reason: name, event_date: today });
     if (error) { setMessage(error.message); return; }
     setPoints(p => p + value);
     if (name === "Alcohol") setAlcoholToday(c => c + 1);
