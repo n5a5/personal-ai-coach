@@ -32,7 +32,7 @@ export default function ResetPage() {
   const [step, setStep] = useState(0);
   const [seconds, setSeconds] = useState(60);
   const [started, setStarted] = useState(false);
-  const [note, setNote] = useState("");
+  const [notes, setNotes] = useState<Record<number, string>>({});
   const [complete, setComplete] = useState(false);
   const [before, setBefore] = useState(7);
   const [after, setAfter] = useState(7);
@@ -46,21 +46,24 @@ export default function ResetPage() {
 
   const current = steps[step];
   const selectedEmotion = emotion === null ? null : emotions[emotion];
+  const currentNote = notes[step] || "";
 
   function next() {
-    setNote("");
-    if (step < steps.length - 1) setStep(s => s + 1);
-    else setComplete(true);
+    if (step < steps.length - 1) {
+      setStep(s => s + 1);
+    } else {
+      setComplete(true);
+    }
   }
 
   function restart() {
-    setEmotion(null); setStartedEmotion(false); setStep(0); setSeconds(60); setStarted(false); setNote(""); setComplete(false); setBefore(7); setAfter(7); setSaved(false);
+    setEmotion(null); setStartedEmotion(false); setStep(0); setSeconds(60); setStarted(false); setNotes({}); setComplete(false); setBefore(7); setAfter(7); setSaved(false);
   }
 
   function saveResult() {
     const key = `personal-ai-coach-reset:${new Date().toISOString()}`;
     try {
-      localStorage.setItem(key, JSON.stringify({ emotion: selectedEmotion?.name, before, after, note, completedAt: new Date().toISOString() }));
+      localStorage.setItem(key, JSON.stringify({ emotion: selectedEmotion?.name, before, after, note: currentNote, completedAt: new Date().toISOString() }));
       setSaved(true);
     } catch {}
   }
@@ -116,7 +119,7 @@ export default function ResetPage() {
             <h2 style={{ fontSize: 30, lineHeight: 1.12, margin: "10px 0 12px" }}>{current.title}</h2>
             <p style={{ fontSize: 17, lineHeight: 1.6, margin: 0, opacity: .75 }}>{current.body}</p>
             <div style={{ marginTop: 20, padding: 16, borderRadius: 14, background: "#f5f3ef", fontWeight: 700, lineHeight: 1.45 }}>{current.prompt}</div>
-            {(step >= 2) && <textarea key={`reset-answer-${step}`} value={note} onChange={e => setNote(e.target.value)} placeholder={step === 2 ? "Write the facts…" : step === 3 ? "What is one thing you can do?" : step === 4 ? "What would you tell someone you love?" : step === 5 ? "What can you stop adding to this situation?" : "One next move — or what you choose to enjoy instead…"} autoComplete="off" style={{ width: "100%", minHeight: 100, marginTop: 14, boxSizing: "border-box", border: "1px solid #ddd", borderRadius: 12, padding: 12, font: "inherit", resize: "vertical" }} />}
+            {(step >= 2) && <textarea key={`reset-answer-${step}`} value={currentNote} onChange={e => setNotes(n => ({ ...n, [step]: e.target.value }))} placeholder={step === 2 ? "Write the facts…" : step === 3 ? "What is one thing you can do?" : step === 4 ? "What would you tell someone you love?" : step === 5 ? "What can you stop adding to this situation?" : "One next move — or what you choose to enjoy instead…"} autoComplete="off" name={`reset-answer-${step}`} style={{ width: "100%", minHeight: 100, marginTop: 14, boxSizing: "border-box", border: "1px solid #ddd", borderRadius: 12, padding: 12, font: "inherit", resize: "vertical" }} />}
             <button onClick={next} style={{ width: "100%", marginTop: 16, border: 0, borderRadius: 14, padding: 15, background: "#171717", color: "white", fontWeight: 800, fontSize: 16 }}>{step === steps.length - 1 ? "I'm ready to return to my life" : "Next →"}</button>
           </section>
         </>}
