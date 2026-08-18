@@ -98,8 +98,7 @@ export default function ReferencePage() {
           <div className="reference-grid">
             {signals.map(([title, body], i) => (
               <article className="reference-card" key={title}>
-                <div className="reference-number">{i + 1}</div>
-                <h3>{title}</h3>
+                <h3 className="reference-signal-title">{i + 1}. {title}</h3>
                 <p>{body}</p>
               </article>
             ))}
