@@ -4,6 +4,15 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import IdentityLoop from "@/app/components/identity-loop";
 
+type IdentityCoaching = {
+  key: string;
+  title: string;
+  prompt: string;
+  whyToday: string;
+  question: string;
+  commitmentPrompt: string;
+};
+
 function localDate() {
   const now = new Date();
   const y = now.getFullYear();
@@ -20,53 +29,28 @@ function renderCoachMessage(message: string) {
 
   const flushParagraph = () => {
     if (!paragraph.length) return;
-    blocks.push(
-      <p key={`p-${blocks.length}`} className="coach-paragraph">
-        {paragraph.join(" ")}
-      </p>,
-    );
+    blocks.push(<p key={`p-${blocks.length}`} className="coach-paragraph">{paragraph.join(" ")}</p>);
     paragraph = [];
   };
 
   const flushList = () => {
     if (!list.length) return;
-    blocks.push(
-      <ul key={`ul-${blocks.length}`} className="coach-list">
-        {list.map((item, index) => <li key={index}>{item}</li>)}
-      </ul>,
-    );
+    blocks.push(<ul key={`ul-${blocks.length}`} className="coach-list">{list.map((item, index) => <li key={index}>{item}</li>)}</ul>);
     list = [];
   };
 
   lines.forEach((rawLine) => {
     const line = rawLine.trim();
-    if (!line) {
-      flushParagraph();
-      flushList();
-      return;
-    }
-
+    if (!line) { flushParagraph(); flushList(); return; }
     const heading = line.match(/^#{1,4}\s*(?:\d+\.\s*)?(.+)$/);
     if (heading) {
-      flushParagraph();
-      flushList();
-      blocks.push(
-        <h2 key={`h-${blocks.length}`} className="coach-section-heading">
-          {heading[1].replace(/\s*[—:-]\s*$/, "")}
-        </h2>,
-      );
+      flushParagraph(); flushList();
+      blocks.push(<h2 key={`h-${blocks.length}`} className="coach-section-heading">{heading[1].replace(/\s*[—:-]\s*$/, "")}</h2>);
       return;
     }
-
     const bullet = line.match(/^(?:[-*•]|\d+\.)\s+(.+)$/);
-    if (bullet) {
-      flushParagraph();
-      list.push(bullet[1]);
-      return;
-    }
-
-    flushList();
-    paragraph.push(line);
+    if (bullet) { flushParagraph(); list.push(bullet[1]); return; }
+    flushList(); paragraph.push(line);
   });
 
   flushParagraph();
@@ -78,6 +62,7 @@ export default function MorningPage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [identityCoaching, setIdentityCoaching] = useState<IdentityCoaching | null>(null);
 
   async function buildMorning() {
     setLoading(true);
@@ -92,6 +77,7 @@ export default function MorningPage() {
       if (data.setup) throw new Error("Live AI is not configured yet.");
       if (!response.ok || data.error) throw new Error(data.error || "Unable to build your morning plan.");
       setMessage(data.message || "");
+      setIdentityCoaching(data.identityCoaching || null);
     } catch (e: any) {
       setError(e?.message || "Unable to build your morning plan.");
     } finally {
@@ -109,7 +95,7 @@ export default function MorningPage() {
         <p style={{ fontSize: 18, opacity: .68, margin: 0 }}>Let's make today a good day—not just a productive one.</p>
       </header>
 
-      <IdentityLoop />
+      <IdentityLoop coaching={identityCoaching} />
 
       <section style={{ ...card, marginTop: 16 }}>
         {loading ? (
@@ -146,15 +132,7 @@ export default function MorningPage() {
       <style jsx>{`
         .coach-message { font-size: 17px; line-height: 1.7; }
         .coach-paragraph { margin: 0 0 22px; }
-        .coach-section-heading {
-          margin: 30px 0 10px;
-          font-size: 13px;
-          line-height: 1.3;
-          letter-spacing: 1.4px;
-          font-weight: 800;
-          text-transform: uppercase;
-          opacity: .55;
-        }
+        .coach-section-heading { margin: 30px 0 10px; font-size: 13px; line-height: 1.3; letter-spacing: 1.4px; font-weight: 800; text-transform: uppercase; opacity: .55; }
         .coach-section-heading:first-child { margin-top: 0; }
         .coach-list { margin: 0 0 22px; padding-left: 22px; }
         .coach-list li { margin: 7px 0; }
