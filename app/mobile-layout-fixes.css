@@ -1,5 +1,5 @@
-/* Mobile layout fixes: keep Momentum visible, prevent overflow, move Sign out below the Today content. */
-/* Production trigger: 2026-08-16 */
+/* Mobile layout fixes: keep Momentum visible, prevent overflow, and protect touch layouts. */
+/* Production trigger: 2026-08-18 */
 @media (max-width: 640px) {
   .today-page {
     display: grid;
@@ -52,4 +52,26 @@
   }
 
   .gameify-modal { grid-area: auto; }
+
+  /* Reset emotion cards: force the selectable cards to behave as simple top-aligned blocks. */
+  main[style*="min-height: 100vh"] section > div[style*="grid-template-columns"] > button {
+    display: block !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    align-self: stretch !important;
+    vertical-align: top !important;
+    text-align: left !important;
+    -webkit-appearance: none !important;
+    appearance: none !important;
+  }
+
+  main[style*="min-height: 100vh"] section > div[style*="grid-template-columns"] > button > div {
+    display: block !important;
+    width: 100% !important;
+    margin-top: 0 !important;
+  }
+
+  main[style*="min-height: 100vh"] section > div[style*="grid-template-columns"] > button > div + div {
+    margin-top: 8px !important;
+  }
 }
