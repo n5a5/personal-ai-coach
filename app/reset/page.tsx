@@ -33,6 +33,7 @@ export default function ResetPage() {
   const [seconds, setSeconds] = useState(60);
   const [started, setStarted] = useState(false);
   const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [answerDraft, setAnswerDraft] = useState("");
   const [complete, setComplete] = useState(false);
   const [before, setBefore] = useState(7);
   const [after, setAfter] = useState(7);
@@ -46,11 +47,16 @@ export default function ResetPage() {
 
   const selectedEmotion = emotion === null ? null : emotions[emotion];
   const current = steps[step];
-  const currentAnswer = answers[step] || "";
 
   function next() {
-    if (step < steps.length - 1) setStep(s => s + 1);
-    else setComplete(true);
+    if (step < steps.length - 1) {
+      setAnswers(a => ({ ...a, [step]: answerDraft }));
+      setAnswerDraft("");
+      setStep(s => s + 1);
+      return;
+    }
+    setAnswers(a => ({ ...a, [step]: answerDraft }));
+    setComplete(true);
   }
 
   function restart() {
@@ -60,6 +66,7 @@ export default function ResetPage() {
     setSeconds(60);
     setStarted(false);
     setAnswers({});
+    setAnswerDraft("");
     setComplete(false);
     setBefore(7);
     setAfter(7);
@@ -125,7 +132,7 @@ export default function ResetPage() {
             <h2 style={{ fontSize: 30, lineHeight: 1.12, margin: "10px 0 12px" }}>{current.title}</h2>
             <p style={{ fontSize: 17, lineHeight: 1.6, margin: 0, opacity: .75 }}>{current.body}</p>
             <div style={{ marginTop: 20, padding: 16, borderRadius: 14, background: "#f5f3ef", fontWeight: 700, lineHeight: 1.45 }}>{current.prompt}</div>
-            {step >= 2 && <textarea key={`reset-answer-${step}`} value={currentAnswer} onChange={e => setAnswers(a => ({ ...a, [step]: e.target.value }))} placeholder={current.placeholder} autoComplete="off" autoCorrect="off" spellCheck={false} name={`reset-answer-step-${step}`} style={{ width: "100%", minHeight: 100, marginTop: 14, boxSizing: "border-box", border: "1px solid #ddd", borderRadius: 12, padding: 12, font: "inherit", resize: "vertical" }} />}
+            {step >= 2 && <textarea key={`reset-answer-${step}`} value={answerDraft} onChange={e => setAnswerDraft(e.target.value)} placeholder={current.placeholder} autoComplete="off" autoCorrect="off" spellCheck={false} name="reset-current-answer" style={{ width: "100%", minHeight: 100, marginTop: 14, boxSizing: "border-box", border: "1px solid #ddd", borderRadius: 12, padding: 12, font: "inherit", resize: "vertical" }} />}
             <button onClick={next} style={{ width: "100%", marginTop: 16, border: 0, borderRadius: 14, padding: 15, background: "#171717", color: "white", fontWeight: 800, fontSize: 16 }}>{step === steps.length - 1 ? "I'm ready to return to my life" : "Next →"}</button>
           </section>
         </>}
