@@ -13,11 +13,11 @@ function localDate() {
   return `${values.year}-${values.month}-${values.day}`;
 }
 
-type State = { win: string; lesson: string; letGo: string; note: string; positiveLoops: string[] };
+type State = { win: string; lesson: string; letGo: string; note: string; positiveLoop: string };
 type PlanItem = { id: string; title?: string; text?: string; detail?: string; completed?: boolean; done?: boolean };
 type IdentityRow = { id: string; identity_title: string; commitment: string | null; commitment_result: string | null; commitment_reflection: string | null };
 
-const empty: State = { win: "", lesson: "", letGo: "", note: "", positiveLoops: ["", "", ""] };
+const empty: State = { win: "", lesson: "", letGo: "", note: "", positiveLoop: "" };
 const fields = [
   ["win", "What went well?", "Capture evidence—not just outcomes. What did you do well, handle well, enjoy, or appreciate today?"],
   ["lesson", "What did you learn?", "What did today teach you about yourself, your priorities, or what consistently works?"],
@@ -58,12 +58,13 @@ export default function EveningPage() {
       ]);
       if (error) setMessage(friendlyError(error));
       if (data) {
+        const savedLoops = Array.isArray(data.evening_positive_loops) ? data.evening_positive_loops.filter(Boolean) : [];
         setState({
           win: data.evening_win || "",
           lesson: data.evening_lesson || "",
           letGo: data.evening_let_go || "",
           note: data.evening_note || "",
-          positiveLoops: Array.from({ length: 3 }, (_, i) => data.evening_positive_loops?.[i] || ""),
+          positiveLoop: savedLoops.join("\n"),
         });
         setSaved(Boolean(data.evening_completed));
       }
@@ -82,16 +83,11 @@ export default function EveningPage() {
   }, [router, supabase]);
 
   function update(key: keyof State, value: string) {
-    if (key === "positiveLoops") return;
     setState(s => ({ ...s, [key]: value }));
     setSaved(false); setMessage("");
   }
-  function updateLoop(index: number, value: string) {
-    setState(s => ({ ...s, positiveLoops: s.positiveLoops.map((loop, i) => i === index ? value : loop) }));
-    setSaved(false); setMessage("");
-  }
 
-  const hasContent = Boolean(state.win.trim() || state.lesson.trim() || state.letGo.trim() || state.note.trim() || state.positiveLoops.some(loop => loop.trim()) || commitmentResult);
+  const hasContent = Boolean(state.win.trim() || state.lesson.trim() || state.letGo.trim() || state.note.trim() || state.positiveLoop.trim() || commitmentResult);
 
   async function save() {
     if (saving || !hasContent) return;
@@ -99,7 +95,7 @@ export default function EveningPage() {
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) { setSaving(false); return router.replace("/login"); }
     const today = localDate();
-    const positiveLoops = state.positiveLoops.map(loop => loop.trim()).filter(Boolean);
+    const positiveLoops = state.positiveLoop.trim() ? [state.positiveLoop.trim()] : [];
     const { error } = await supabase.from("daily_logs").upsert({
       user_id: userData.user.id,
       log_date: today,
@@ -184,12 +180,11 @@ export default function EveningPage() {
       </section>
 
       <section style={{ marginTop: 14, background: "#f4f1e9", borderRadius: 22, padding: 22, boxShadow: "0 6px 24px rgba(0,0,0,.04)" }}>
-        <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 1.5, opacity: .55 }}>POSITIVE LOOPS</div>
-        <h2 style={{ fontSize: 27, margin: "7px 0 7px", letterSpacing: -.5 }}>What do you want to reinforce?</h2>
-        <p style={{ margin: "0 0 16px", color: "#666", lineHeight: 1.5 }}>Write the behaviors, thoughts, or routines that create more of what you want. Think: <strong>action → result → feeling → more action.</strong> These are the loops worth repeating.</p>
-        <div style={{ display: "grid", gap: 10 }}>
-          {state.positiveLoops.map((loop, index) => <textarea key={index} value={loop} onChange={e => updateLoop(index, e.target.value)} rows={2} placeholder={["Example: I started the hard task first → got momentum → felt in control → kept going.", "Example: I paused before reacting → made a better decision → felt calm and powerful.", "Example: I followed through on one promise to myself → trusted myself more → wanted to follow through again."][index]} style={{ width: "100%", boxSizing: "border-box", border: "1px solid #d8d3c8", borderRadius: 12, padding: 12, resize: "vertical", lineHeight: 1.45, background: "white" }} />)}
-        </div>
+        <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 1.5, color: "#777" }}>OPTIONAL · POSITIVE LOOP</div>
+        <h2 style={{ fontSize: 27, margin: "7px 0 7px", letterSpacing: -.5 }}>Reinforce one thing.</h2>
+        <p style={{ margin: "0 0 14px", color: "#666", lineHeight: 1.5 }}>What worked today that you want more of?</p>
+        <textarea value={state.positiveLoop} onChange={e => update("positiveLoop", e.target.value)} rows={3} placeholder="I paused before reacting → stayed calm → handled it better." style={{ width: "100%", boxSizing: "border-box", border: "1px solid #d8d3c8", borderRadius: 12, padding: 13, resize: "vertical", lineHeight: 1.5, background: "white" }} />
+        <div style={{ marginTop: 10, color: "#777", fontSize: 13, lineHeight: 1.4 }}>Just write naturally. The AI coach can look for the action → result → feeling pattern.</div>
       </section>
 
       {message && <div role="status" style={{ marginTop: 14, padding: 13, background: "#e9e7e2", borderRadius: 12, fontWeight: 700 }}>{message}</div>}
