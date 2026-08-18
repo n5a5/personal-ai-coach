@@ -71,6 +71,12 @@ export default function CoachPage() {
           <a href="#ai-coach" style={{ display: "inline-block", background: "white", color: "#171717", borderRadius: 10, padding: "10px 14px", fontWeight: 800, textDecoration: "none" }}>Open AI Coach ↓</a>
         </article>
 
+        <Link href="/learning" style={{ display: "block", background: "white", border: "1px solid #E7E5E0", borderRadius: 16, padding: 20, color: "#171717", textDecoration: "none" }}>
+          <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 1.5, textTransform: "uppercase", color: "#6B6B6B" }}>YOUR COACH'S MEMORY</div>
+          <h2 style={{ margin: "7px 0 6px", fontSize: 24 }}>What I've learned about you →</h2>
+          <p style={{ margin: 0, lineHeight: 1.5, color: "#6B6B6B" }}>See the patterns, preferences, goals, and insights the coach has built from your reflections and conversations—and how confident it is.</p>
+        </Link>
+
         <Link href="/workout" style={{ display: "block", background: "white", border: "1px solid #E7E5E0", borderRadius: 16, padding: 20, color: "#171717", textDecoration: "none" }}>
           <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 1.5, textTransform: "uppercase", color: "#6B6B6B" }}>WORKOUT COACH</div>
           <h2 style={{ margin: "7px 0 6px", fontSize: 24 }}>Build a workout →</h2>
