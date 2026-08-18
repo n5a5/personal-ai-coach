@@ -98,7 +98,7 @@ export default function ResetPage() {
             <p style={{ fontSize: 15, lineHeight: 1.5, opacity: .7, margin: 0 }}>Feelings are signals, not commands. Identify the signal, clarify what it means, then choose a response.</p>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10, marginTop: 18 }}>
               {emotions.map((item, i) => (
-                <button key={item.name} onClick={() => setEmotion(i)} style={{ textAlign: "left", border: emotion === i ? "2px solid #171717" : "1px solid #ddd", borderRadius: 14, padding: 13, background: emotion === i ? "#f1efea" : "white", cursor: "pointer" }}>
+                <button key={item.name} onClick={() => setEmotion(i)} style={{ display: "block", width: "100%", boxSizing: "border-box", textAlign: "left", border: emotion === i ? "2px solid #171717" : "1px solid #ddd", borderRadius: 14, padding: 13, background: emotion === i ? "#f1efea" : "white", cursor: "pointer", alignSelf: "stretch", verticalAlign: "top" }}>
                   <div style={{ display: "block", whiteSpace: "nowrap", fontSize: 14, lineHeight: 1.2, minHeight: 17 }}><strong>{i + 1}. {item.name}</strong></div>
                   <div style={{ marginTop: 8, fontSize: 12, lineHeight: 1.45, opacity: .72 }}>{item.body}</div>
                 </button>
