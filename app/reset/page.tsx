@@ -81,6 +81,27 @@ export default function ResetPage() {
     } catch {}
   }
 
+  const emotionCardStyle = {
+    display: "flex",
+    flexDirection: "column" as const,
+    justifyContent: "flex-start",
+    alignItems: "stretch",
+    alignSelf: "stretch",
+    width: "100%",
+    minWidth: 0,
+    boxSizing: "border-box" as const,
+    margin: 0,
+    textAlign: "left" as const,
+    WebkitAppearance: "none" as const,
+    appearance: "none" as const,
+    borderRadius: 14,
+    padding: 13,
+    cursor: "pointer",
+    font: "inherit",
+    lineHeight: "normal",
+    overflow: "visible",
+  };
+
   return (
     <main style={{ minHeight: "100vh", background: "#f5f3ef", padding: "18px 16px 150px" }}>
       <div style={{ maxWidth: 620, margin: "0 auto" }}>
@@ -96,10 +117,18 @@ export default function ResetPage() {
             <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 1.5, opacity: .5 }}>EMOTIONAL SIGNALS</div>
             <h2 style={{ fontSize: 30, lineHeight: 1.1, margin: "8px 0" }}>What are you feeling?</h2>
             <p style={{ fontSize: 15, lineHeight: 1.5, opacity: .7, margin: 0 }}>Feelings are signals, not commands. Identify the signal, clarify what it means, then choose a response.</p>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10, marginTop: 18 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10, marginTop: 18, alignItems: "stretch" }}>
               {emotions.map((item, i) => (
-                <button key={item.name} onClick={() => setEmotion(i)} style={{ display: "block", width: "100%", boxSizing: "border-box", textAlign: "left", border: emotion === i ? "2px solid #171717" : "1px solid #ddd", borderRadius: 14, padding: 13, background: emotion === i ? "#f1efea" : "white", cursor: "pointer", alignSelf: "stretch", verticalAlign: "top" }}>
-                  <div style={{ display: "block", whiteSpace: "nowrap", fontSize: 14, lineHeight: 1.2, minHeight: 17 }}><strong>{i + 1}. {item.name}</strong></div>
+                <button
+                  key={item.name}
+                  onClick={() => setEmotion(i)}
+                  style={{
+                    ...emotionCardStyle,
+                    border: emotion === i ? "2px solid #171717" : "1px solid #ddd",
+                    background: emotion === i ? "#f1efea" : "white",
+                  }}
+                >
+                  <div style={{ display: "block", width: "100%", whiteSpace: "nowrap", fontSize: 14, lineHeight: 1.2, minHeight: 17 }}><strong>{i + 1}. {item.name}</strong></div>
                   <div style={{ marginTop: 8, fontSize: 12, lineHeight: 1.45, opacity: .72 }}>{item.body}</div>
                 </button>
               ))}
