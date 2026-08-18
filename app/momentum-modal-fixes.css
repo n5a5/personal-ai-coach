@@ -1,9 +1,12 @@
-/* Momentum modal: compact, action-first mobile UX. */
+/* Momentum: action-first, mobile-first UI. Keep the interaction simple and obvious. */
 .gameify-modal {
+  position: fixed !important;
+  inset: 0 !important;
   z-index: 200 !important;
+  display: grid !important;
+  place-items: end center !important;
+  padding: 12px !important;
   background: rgba(23,23,23,.42) !important;
-  padding: 16px !important;
-  align-items: end !important;
 }
 
 .gameify-panel {
@@ -12,6 +15,7 @@
   max-height: min(88vh, 760px) !important;
   overflow-y: auto !important;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   background: #fff !important;
   border: 1px solid #e7e5e0;
   border-radius: 24px !important;
@@ -20,23 +24,26 @@
 }
 
 .gameify-head {
+  display: flex !important;
   align-items: center !important;
-  margin-bottom: 2px;
+  justify-content: space-between !important;
+  gap: 14px;
+  margin-bottom: 4px;
 }
 
 .gameify-head h2 {
   margin: 3px 0 0 !important;
-  font-size: 24px !important;
-  line-height: 1.15 !important;
-  letter-spacing: -.4px;
+  font-size: 25px !important;
+  line-height: 1.12 !important;
+  letter-spacing: -.5px;
 }
 
-.gameify-head + p {
-  margin: 7px 0 18px !important;
+.gameify-intro {
+  margin: 8px 0 18px !important;
   color: #6b6b6b;
   font-size: 13px;
   line-height: 1.45;
-  max-width: 500px;
+  max-width: 520px;
 }
 
 .gameify-panel > h3 {
@@ -59,30 +66,31 @@
   min-height: 66px;
   display: grid !important;
   grid-template-columns: minmax(0,1fr) auto !important;
-  grid-template-rows: auto auto;
-  gap: 3px 12px !important;
+  grid-template-rows: auto !important;
   align-items: center !important;
-  text-align: left;
+  gap: 10px !important;
+  text-align: left !important;
   color: #171717 !important;
   background: #fff !important;
   border: 1px solid #e4e1da !important;
   border-radius: 14px !important;
-  padding: 11px 13px !important;
+  padding: 11px 12px !important;
   margin: 0 !important;
   box-shadow: none !important;
   cursor: pointer;
-  transition: transform .1s ease, border-color .1s ease, background .1s ease;
   touch-action: manipulation;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  transition: transform .08s ease, border-color .12s ease, background .12s ease;
 }
 
 .gameify-row:hover:not(:disabled) {
   border-color: #c8c2b8 !important;
   background: #fcfbf9 !important;
-  box-shadow: none !important;
 }
 
 .gameify-row:active:not(:disabled) {
-  transform: scale(.99);
+  transform: scale(.985);
   background: #f7f5f1 !important;
 }
 
@@ -94,79 +102,78 @@
 .gameify-main {
   min-width: 0;
   display: grid !important;
-  gap: 2px !important;
-  grid-column: 1;
-  grid-row: 1 / span 2;
+  gap: 3px !important;
 }
 
 .gameify-main b {
+  display: block;
   font-size: 15px !important;
   line-height: 1.25 !important;
   font-weight: 800 !important;
 }
 
 .gameify-main small {
+  display: block;
   color: #73706a !important;
   line-height: 1.35 !important;
   font-size: 12px !important;
 }
 
 .gameify-action-label {
-  grid-column: 2 !important;
-  grid-row: 1 / span 2;
   align-self: center !important;
   justify-self: end !important;
   min-width: 48px;
+  max-width: 110px;
   padding: 7px 9px;
   border-radius: 9px;
   background: #f5f3ef;
   color: #171717 !important;
   font-size: 13px !important;
-  line-height: 1 !important;
+  line-height: 1.1 !important;
   font-weight: 900 !important;
-  text-align: center;
+  text-align: center !important;
   white-space: nowrap;
 }
 
-/* The normal Earn labels are intentionally replaced with the actual reward. */
-.gameify-actions:first-of-type .gameify-row:nth-child(1) .gameify-action-label,
-.gameify-actions:first-of-type .gameify-row:nth-child(2) .gameify-action-label,
-.gameify-actions:first-of-type .gameify-row:nth-child(3) .gameify-action-label,
-.gameify-actions:first-of-type .gameify-row:nth-child(4) .gameify-action-label,
-.gameify-actions:first-of-type .gameify-row:nth-child(5) .gameify-action-label,
-.gameify-actions:first-of-type .gameify-row:nth-child(6) .gameify-action-label,
-.gameify-actions:first-of-type .gameify-row:nth-child(7) .gameify-action-label {
-  font-size: 0 !important;
-}
-.gameify-actions:first-of-type .gameify-row:nth-child(1) .gameify-action-label::after { content: "+1"; font-size: 13px; }
-.gameify-actions:first-of-type .gameify-row:nth-child(2) .gameify-action-label::after { content: "+4"; font-size: 13px; }
-.gameify-actions:first-of-type .gameify-row:nth-child(3) .gameify-action-label::after { content: "+8"; font-size: 13px; }
-.gameify-actions:first-of-type .gameify-row:nth-child(4) .gameify-action-label::after { content: "+3"; font-size: 13px; }
-.gameify-actions:first-of-type .gameify-row:nth-child(5) .gameify-action-label::after { content: "+2"; font-size: 13px; }
-.gameify-actions:first-of-type .gameify-row:nth-child(6) .gameify-action-label::after { content: "+2"; font-size: 13px; }
-.gameify-actions:first-of-type .gameify-row:nth-child(7) .gameify-action-label::after { content: "+2"; font-size: 13px; }
-.gameify-actions:first-of-type .gameify-row.earned .gameify-action-label::after { content: "✓" !important; font-size: 14px !important; }
-.gameify-actions:first-of-type .gameify-row.pending .gameify-action-label::after { content: "…" !important; font-size: 16px !important; }
-
 .gameify-row.earned {
-  opacity: 1 !important;
   background: #faf9f6 !important;
   border-color: #d8d4cc !important;
   cursor: default;
 }
+
 .gameify-row.earned .gameify-action-label {
   background: #f0dfbf !important;
   color: #7b4d11 !important;
 }
+
 .gameify-row.pending {
   background: #f5f3ef !important;
   border-color: #cfc9bf !important;
+  cursor: wait;
+}
+
+.gameify-row.pending .gameify-action-label {
+  background: #171717 !important;
+  color: white !important;
+}
+
+.gameify-row.blocked {
+  background: #faf9f6 !important;
+  border-color: #e7e5e0 !important;
+  cursor: default;
+  opacity: .62;
+}
+
+.gameify-row.blocked .gameify-action-label {
+  min-width: 82px;
+  background: transparent !important;
+  color: #8a867f !important;
+  font-size: 11px !important;
 }
 
 .gameify-meta {
   grid-column: 1 / -1 !important;
-  grid-row: 3;
-  margin-top: 2px;
+  margin: 0 !important;
   color: #73706a !important;
   font-size: 11px !important;
   line-height: 1.25 !important;
@@ -175,78 +182,80 @@
 .gameify-balance {
   margin-top: 14px !important;
   padding: 13px 14px !important;
+  display: grid !important;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  gap: 2px 12px;
   background: #171717 !important;
   color: #fff !important;
   border-radius: 12px !important;
-  font-size: 14px;
+}
+
+.gameify-balance span {
+  font-size: 11px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  opacity: .6;
+  font-weight: 800;
+}
+
+.gameify-balance strong {
+  font-size: 20px;
+}
+
+.gameify-balance small {
+  grid-column: 1 / -1;
+  color: #cfcfcf;
+  font-size: 11px;
 }
 
 .gameify-feedback {
   margin-top: 8px !important;
   padding: 7px 10px !important;
   border-radius: 9px !important;
-  background: transparent !important;
+  background: #f5f3ef !important;
   color: #6b6b6b !important;
-  box-shadow: none !important;
   text-align: center;
   font-size: 11px !important;
   font-weight: 700;
 }
-.gameify-feedback.success { color: #7b4d11 !important; background: transparent !important; }
 
-/* Reference library: keep the number and title on one typographic line. */
-.reference-signal-title {
-  margin: 0 0 9px !important;
-  font-size: 19px !important;
-  line-height: 1.2 !important;
-  letter-spacing: -.15px;
+.gameify-feedback.success {
+  color: #7b4d11 !important;
+  background: #f7f0e4 !important;
 }
 
 @media (max-width: 640px) {
   .gameify-modal {
-    padding: 10px !important;
+    padding: 8px !important;
   }
 
   .gameify-panel {
     width: 100% !important;
     max-width: none !important;
-    max-height: calc(100dvh - 20px) !important;
+    max-height: calc(100dvh - 16px) !important;
     border-radius: 22px !important;
-    padding: 18px 14px calc(16px + env(safe-area-inset-bottom)) !important;
+    padding: 18px 13px calc(14px + env(safe-area-inset-bottom)) !important;
   }
 
   .gameify-head h2 {
     font-size: 23px !important;
   }
 
-  .gameify-head + p {
-    margin-bottom: 15px !important;
+  .gameify-intro {
+    font-size: 12px;
+    margin-bottom: 14px !important;
   }
 
   .gameify-panel > h3 {
-    margin-top: 17px !important;
+    margin-top: 16px !important;
   }
 
   .gameify-row {
-    min-height: 62px !important;
+    min-height: 60px !important;
     grid-template-columns: minmax(0,1fr) auto !important;
-    padding: 10px 11px !important;
-  }
-
-  /* Override the older mobile rule that moved every span below the main content. */
-  .gameify-row span {
-    grid-column: auto !important;
-  }
-
-  .gameify-main {
-    grid-column: 1 !important;
-    grid-row: 1 / span 2 !important;
-  }
-
-  .gameify-action-label {
-    grid-column: 2 !important;
-    grid-row: 1 / span 2 !important;
-    min-width: 44px;
+    gap: 8px !important;
+    padding: 10px !important;
   }
 
   .gameify-main b {
@@ -256,4 +265,23 @@
   .gameify-main small {
     font-size: 11px !important;
   }
+
+  .gameify-action-label {
+    min-width: 43px;
+    padding: 7px 8px;
+    font-size: 12px !important;
+  }
+
+  .gameify-row.blocked .gameify-action-label {
+    min-width: 74px;
+    white-space: normal;
+  }
+}
+
+/* Reference library headings: number + title stay on one typographic line. */
+.reference-signal-title {
+  margin: 0 0 9px !important;
+  font-size: 19px !important;
+  line-height: 1.2 !important;
+  letter-spacing: -.15px;
 }
