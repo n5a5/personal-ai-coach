@@ -5,12 +5,12 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
+const APP_TIME_ZONE = "America/New_York";
+
 function localDate() {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, "0");
-  const d = String(now.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone: APP_TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map(p => [p.type, p.value]));
+  return `${values.year}-${values.month}-${values.day}`;
 }
 
 type State = {
@@ -34,6 +34,14 @@ const fields = [
 
 const labels: Record<string, string> = { body: "BODY", mind: "MIND", important: "IMPORTANT", life: "LIFE" };
 
+function friendlyError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error || "");
+  if (/duplicate key|unique constraint|already exists/i.test(message)) return "Journal saved. Your +2 points were already recorded today.";
+  if (/not authenticated|jwt|auth/i.test(message)) return "Your session expired. Please sign in again.";
+  if (/network|fetch|failed to fetch/i.test(message)) return "Couldn't save that. Check your connection and try again.";
+  return "Couldn't save the journal. Please try again.";
+}
+
 export default function EveningPage() {
   const supabase = createClient();
   const router = useRouter();
@@ -55,7 +63,7 @@ export default function EveningPage() {
           .eq("user_id", userData.user.id).eq("log_date", today).maybeSingle(),
         fetch(`/api/daily-plan?date=${today}`, { cache: "no-store" }).catch(() => null),
       ]);
-      if (error) { setMessage(error.message); }
+      if (error) { setMessage(friendlyError(error)); }
       if (data) {
         setState({
           win: data.evening_win || "",
@@ -111,15 +119,26 @@ export default function EveningPage() {
       evening_positive_loops: positiveLoops,
       evening_completed: true,
     }, { onConflict: "user_id,log_date" });
-    if (error) { setMessage(error.message); setSaving(false); return; }
+    if (error) { setMessage(friendlyError(error)); setSaving(false); return; }
 
     const { data: existing } = await supabase.from("point_transactions")
       .select("id").eq("user_id", userData.user.id).eq("reason", "Evening reflection")
-      .gte("created_at", `${today}T00:00:00.000Z`).maybeSingle();
+      .eq("event_date", today).maybeSingle();
+
     if (!existing) {
-      const { error: pointError } = await supabase.from("point_transactions").insert({ user_id: userData.user.id, amount: 2, reason: "Evening reflection" });
-      if (pointError) { setMessage(pointError.message); setSaving(false); return; }
+      const { error: pointError } = await supabase.from("point_transactions").insert({
+        user_id: userData.user.id,
+        amount: 2,
+        reason: "Evening reflection",
+        event_date: today,
+      });
+      if (pointError && !/duplicate key|unique constraint/i.test(pointError.message)) {
+        setMessage(friendlyError(pointError));
+        setSaving(false);
+        return;
+      }
     }
+
     setSaved(true);
     setMessage(existing ? "Evening journal updated." : "+2 momentum · Evening journal saved.");
     setSaving(false);
@@ -151,7 +170,7 @@ export default function EveningPage() {
                   <span aria-hidden="true" style={{ width: 22, height: 22, borderRadius: "50%", display: "grid", placeItems: "center", background: done ? "#171717" : "white", color: done ? "white" : "#777", border: done ? 0 : "1px solid #cfcfc9", flex: "0 0 auto", fontWeight: 800 }}>{done ? "✓" : ""}</span>
                   <div>
                     <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1.1, color: "#777", marginBottom: 2 }}>{labels[item.id] || item.title || item.id}</div>
-                    <div style={{ lineHeight: 1.4, textDecoration: done ? "none" : "none" }}>{item.detail || item.text || item.title}</div>
+                    <div style={{ lineHeight: 1.4 }}>{item.detail || item.text || item.title}</div>
                   </div>
                 </div>
               );
