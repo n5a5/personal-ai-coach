@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import "./today-overrides.css";
+import "./today-command-center.css";
 import "./mobile-layout-fixes.css";
 import "./momentum-modal-fixes.css";
 import CoachNav from "./components/coach-nav";
