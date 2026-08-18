@@ -22,6 +22,13 @@ export default function CoachPage() {
   const [setup, setSetup] = useState(false);
   const [error, setError] = useState("");
   const bottom = useRef<HTMLDivElement>(null);
+  const historyLoaded = useRef(false);
+  const shouldScrollToBottom = useRef(false);
+
+  // Always enter Coach at the top of the page.
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" as ScrollBehavior });
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -30,7 +37,10 @@ export default function CoachPage() {
         const res = await fetch("/api/coach", { cache: "no-store" });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Unable to load history");
-        if (active) setMessages((data.messages || []).map((m: Message) => ({ role: m.role, content: m.content, id: m.id })));
+        if (active) {
+          historyLoaded.current = true;
+          setMessages((data.messages || []).map((m: Message) => ({ role: m.role, content: m.content, id: m.id })));
+        }
       } catch (e: any) {
         if (active && e?.message) setError(e.message);
       }
@@ -38,12 +48,20 @@ export default function CoachPage() {
     return () => { active = false; };
   }, []);
 
-  useEffect(() => { bottom.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, loading]);
+  // Only scroll the conversation when the user actually sends a message or a reply arrives.
+  // Loading persisted history must never pull the page down to the bottom.
+  useEffect(() => {
+    if (historyLoaded.current && shouldScrollToBottom.current) {
+      bottom.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      shouldScrollToBottom.current = false;
+    }
+  }, [messages, loading]);
 
   async function send(text = input) {
     const clean = text.trim();
     if (!clean || loading) return;
     setInput(""); setLoading(true); setSetup(false); setError("");
+    shouldScrollToBottom.current = true;
     const next = [...messages, { role: "user" as const, content: clean }];
     setMessages(next);
     try {
