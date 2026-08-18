@@ -1,18 +1,5 @@
 import Link from "next/link";
 
-const signals = [
-  ["Uncomfortable", "When you feel uncomfortable, this is a signal to change your state. Clarify what you want, then take action in that direction."],
-  ["Fear", "Fear is a signal to prepare ourselves or get prepared. Get yourself prepared to deal with something that's about to come. If it's beyond your control, then change your perception and let it go. 5 Why's; worst case scenario."],
-  ["Hurt", "Hurt is a signal that you have an expectation that's not being met or you have a sense of loss. Evaluate whether there really is a loss. Next, change your perception or change the way of communicating your needs or change your behavior."],
-  ["Anger", "Anger is a signal that an important rule that you have in your life has been violated by somebody else or maybe even by you. Clarify your rules or adjust them. Your rules might not match other people's rules so if you don't change them, you might be angry the rest of your life."],
-  ["Frustration", "The signal is you're doing the same thing over and again expecting a different result. You need to change your approach to achieving your goal."],
-  ["Disappointment", "The signal is that you need to realize that an expectation or an outcome that you want won't happen, and you need to change your expectation. For example, maybe your timeframe was too short."],
-  ["Guilt or Regret", "Guilt is a signal that you violated one of your own standards. Don't stay in guilt, but don't deny it. Make things right when you screw up. When you can't change the past, change your present and future behaviors. Recognize when you're feeling guilty when you shouldn't be, change your perception, and let it go."],
-  ["Inadequacy", "This is a signal that you need to do something to get better. Get up and do something to get better or change your criteria. Maybe your rules are too harsh. You don't have to be perfect — you simply need to start taking action, such as go practice, to improve at whatever it is."],
-  ["Overloaded", "This is a signal to reevaluate what is most important to you in this situation. Distinguish between what is necessary versus what is a desire. Prioritize your list. Make the first one on your list and do something about it. Do something to take control of events instead of letting them control you. The simplest way is to chunk it down, take one thing and act on it."],
-  ["Loneliness", "The signal is we need a connection with people. Clarify what kind of connection you need: basic friendship, somebody to laugh with, somebody to listen to you, etc. Then change your approach or change your perception."],
-];
-
 const tools = [
   ["Separate facts from predictions", "What has actually happened? What am I predicting? What proof would it take to change my mind?"],
   ["Control", "Worry only about what you can control. You don't control what happens; you control how you respond."],
@@ -73,7 +60,6 @@ export default function ReferencePage() {
           </div>
         </section>
 
-        <section className="reference-section"><div className="eyebrow">EMOTIONAL SIGNALS</div><h2>What the feeling may be telling you.</h2><p className="section-intro">Feelings are signals, not commands. Identify the signal, clarify what it means, then choose a response.</p><div className="reference-grid">{signals.map(([title, body], i) => <article className="reference-card" key={title}><h3 className="reference-signal-title">{i + 1}. {title}</h3><p>{body}</p></article>)}</div></section>
         <section className="reference-section"><div className="eyebrow">THINKING TOOLS</div><h2>Use these when your mind starts running.</h2><div className="reference-list">{tools.map(([title, body]) => <article className="reference-row" key={title}><h3>{title}</h3><p>{body}</p></article>)}</div></section>
         <section className="reference-section"><div className="eyebrow">QUESTIONS</div><h2>Questions that change the frame.</h2><div className="question-list">{questions.map(q => <div key={q}>{q}</div>)}</div></section>
         <section className="reference-section"><div className="eyebrow">REMINDERS</div><h2>Read one. Then act.</h2><div className="reminder-grid">{reminders.map(q => <div key={q} className="reminder">{q}</div>)}</div></section>
