@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 type IdentityCoaching = {
@@ -28,7 +28,6 @@ function localDate() {
 
 export default function IdentityLoop({ coaching }: { coaching?: IdentityCoaching | null }) {
   const supabase = createClient();
-  const storageKey = useMemo(() => `identity-loop:${localDate()}`, []);
   const [focus, setFocus] = useState<IdentityCoaching>(coaching || fallback);
   const [entries, setEntries] = useState<string[]>(["", "", ""]);
   const [commitment, setCommitment] = useState("");
@@ -51,6 +50,8 @@ export default function IdentityLoop({ coaching }: { coaching?: IdentityCoaching
         .select("identity_key,identity_title,repetitions,proof,why_today,adaptive_question,adaptive_answer,commitment")
         .eq("user_id", userData.user.id)
         .eq("loop_date", localDate())
+        .order("updated_at", { ascending: false })
+        .limit(1)
         .maybeSingle();
       if (error) { setMessage(error.message); setLoading(false); return; }
       if (data) {
