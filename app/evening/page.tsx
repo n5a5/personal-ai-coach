@@ -15,6 +15,7 @@ function localDate() {
 
 type State = { win: string; lesson: string; letGo: string; note: string; positiveLoops: string[] };
 type PlanItem = { id: string; title?: string; text?: string; detail?: string; completed?: boolean; done?: boolean };
+type IdentityRow = { id: string; identity_title: string; commitment: string | null; commitment_result: string | null; commitment_reflection: string | null };
 
 const empty: State = { win: "", lesson: "", letGo: "", note: "", positiveLoops: ["", "", ""] };
 const fields = [
@@ -42,15 +43,18 @@ export default function EveningPage() {
   const [saved, setSaved] = useState(false);
   const [message, setMessage] = useState("");
   const [planItems, setPlanItems] = useState<PlanItem[]>([]);
+  const [identity, setIdentity] = useState<IdentityRow | null>(null);
+  const [commitmentResult, setCommitmentResult] = useState("");
 
   useEffect(() => {
     async function load() {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) { router.replace("/login"); return; }
       const today = localDate();
-      const [{ data, error }, planResponse] = await Promise.all([
+      const [{ data, error }, planResponse, identityResponse] = await Promise.all([
         supabase.from("daily_logs").select("evening_win,evening_lesson,evening_let_go,evening_note,evening_positive_loops,evening_completed").eq("user_id", userData.user.id).eq("log_date", today).maybeSingle(),
         fetch(`/api/daily-plan?date=${today}`, { cache: "no-store" }).catch(() => null),
+        supabase.from("identity_loops").select("id,identity_title,commitment,commitment_result,commitment_reflection").eq("user_id", userData.user.id).eq("loop_date", today).maybeSingle(),
       ]);
       if (error) setMessage(friendlyError(error));
       if (data) {
@@ -62,6 +66,10 @@ export default function EveningPage() {
           positiveLoops: Array.from({ length: 3 }, (_, i) => data.evening_positive_loops?.[i] || ""),
         });
         setSaved(Boolean(data.evening_completed));
+      }
+      if (identityResponse?.data) {
+        setIdentity(identityResponse.data as IdentityRow);
+        setCommitmentResult(identityResponse.data.commitment_result || "");
       }
       if (planResponse?.ok) {
         const planData = await planResponse.json().catch(() => ({}));
@@ -83,7 +91,7 @@ export default function EveningPage() {
     setSaved(false); setMessage("");
   }
 
-  const hasContent = Boolean(state.win.trim() || state.lesson.trim() || state.letGo.trim() || state.note.trim() || state.positiveLoops.some(loop => loop.trim()));
+  const hasContent = Boolean(state.win.trim() || state.lesson.trim() || state.letGo.trim() || state.note.trim() || state.positiveLoops.some(loop => loop.trim()) || commitmentResult);
 
   async function save() {
     if (saving || !hasContent) return;
@@ -104,7 +112,15 @@ export default function EveningPage() {
     }, { onConflict: "user_id,log_date" });
     if (error) { setMessage(friendlyError(error)); setSaving(false); return; }
 
-    // The database trigger awards +2 exactly once when evening_completed becomes true.
+    if (identity?.id) {
+      const { error: identityError } = await supabase.from("identity_loops").update({
+        commitment_result: commitmentResult || null,
+        commitment_reflection: state.lesson.trim() || null,
+        updated_at: new Date().toISOString(),
+      }).eq("id", identity.id).eq("user_id", userData.user.id);
+      if (identityError) console.error("Identity commitment save error:", identityError);
+    }
+
     setSaved(true);
     setMessage("✓ Evening journal saved · +2 Momentum included.");
     setSaving(false);
@@ -121,6 +137,21 @@ export default function EveningPage() {
         <h1 style={{ fontSize: 48, lineHeight: 1.02, letterSpacing: -1.5, margin: "8px 0 12px" }}>Close the loop.</h1>
         <p style={{ fontSize: 19, lineHeight: 1.5, color: "#666", margin: 0 }}>Capture the evidence, reinforce what is working, release what can wait, and give tomorrow a better starting point.</p>
       </header>
+
+      {identity?.commitment && (
+        <section style={{ background: "#f4f1e9", borderRadius: 20, padding: 20, marginBottom: 16, border: "1px solid #e5e0d6" }} aria-label="Morning identity commitment">
+          <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 1.5, color: "#777" }}>MORNING → EVENING</div>
+          <h2 style={{ fontSize: 25, lineHeight: 1.2, margin: "7px 0 5px" }}>Did you create evidence for your identity?</h2>
+          <p style={{ margin: "0 0 12px", lineHeight: 1.45, color: "#555" }}><strong>{identity.identity_title}</strong></p>
+          <div style={{ padding: 13, background: "white", borderRadius: 12, lineHeight: 1.45 }}>{identity.commitment}</div>
+          <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+            {[['yes', '✓ Yes'], ['partial', '~ Partially'], ['no', '× Not today']].map(([value, label]) => (
+              <button key={value} type="button" onClick={() => { setCommitmentResult(value); setSaved(false); setMessage(""); }} style={{ border: commitmentResult === value ? "2px solid #171717" : "1px solid #d8d5ce", borderRadius: 11, padding: "11px 8px", background: commitmentResult === value ? "white" : "#f8f7f4", fontWeight: 750, cursor: "pointer" }}>{label}</button>
+            ))}
+          </div>
+          <div style={{ marginTop: 10, color: "#777", fontSize: 13 }}>Your answer and tonight's lesson are saved with this commitment for future coaching.</div>
+        </section>
+      )}
 
       {planItems.length > 0 && (
         <section style={{ background: "white", border: "1px solid #e7e5e0", borderRadius: 20, padding: 20, marginBottom: 16 }} aria-label="Today's morning commitments">
