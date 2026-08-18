@@ -10,7 +10,7 @@ const links = [
   ["/reset", "Reset", "↺"],
   ["/coach", "Coach", "✦"],
   ["/profile", "Profile", "○"],
-  ["/reference", "Reference", "?"],
+  ["/reference", "Tools", "?"],
 ];
 
 export default function CoachNav() {
