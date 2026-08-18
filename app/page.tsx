@@ -29,25 +29,13 @@ const costs = [
 ];
 
 const APP_TIME_ZONE = "America/New_York";
-
 function localDate() {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: APP_TIME_ZONE,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(new Date());
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone: APP_TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
   const values = Object.fromEntries(parts.map(p => [p.type, p.value]));
   return `${values.year}-${values.month}-${values.day}`;
 }
-
 function transactionDate(createdAt: string) {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: APP_TIME_ZONE,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(new Date(createdAt));
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone: APP_TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date(createdAt));
   const values = Object.fromEntries(parts.map(p => [p.type, p.value]));
   return `${values.year}-${values.month}-${values.day}`;
 }
@@ -63,6 +51,7 @@ export default function Home() {
   const [earned, setEarned] = useState<string[]>([]);
   const [rules, setRules] = useState<Record<string, string>>({});
   const [message, setMessage] = useState("");
+  const [pendingAward, setPendingAward] = useState<string | null>(null);
   const [checkInSaved, setCheckInSaved] = useState(false);
   const [gratitudeSaved, setGratitudeSaved] = useState(false);
   const [savingCheckIn, setSavingCheckIn] = useState(false);
@@ -113,8 +102,7 @@ export default function Home() {
 
   async function saveCheckIn() {
     if (savingCheckIn || checkInSaved) return;
-    setSavingCheckIn(true);
-    setMessage("");
+    setSavingCheckIn(true); setMessage("");
     const { data } = await supabase.auth.getUser();
     if (!data.user) { setSavingCheckIn(false); return router.replace("/login"); }
     const today = localDate();
@@ -126,15 +114,12 @@ export default function Home() {
       if (pointError) { setMessage(pointError.message); setSavingCheckIn(false); return; }
       setPoints(p => p + 1);
     }
-    setCheckInSaved(true);
-    setMessage("+1 momentum · Daily check-in saved.");
-    setSavingCheckIn(false);
+    setCheckInSaved(true); setMessage("+1 momentum · Daily check-in saved."); setSavingCheckIn(false);
   }
 
   async function saveGratitude() {
     if (savingGratitude || gratitudeSaved || !gratitude.trim()) return;
-    setSavingGratitude(true);
-    setMessage("");
+    setSavingGratitude(true); setMessage("");
     const { data } = await supabase.auth.getUser();
     if (!data.user) { setSavingGratitude(false); return router.replace("/login"); }
     const today = localDate();
@@ -146,30 +131,39 @@ export default function Home() {
       if (pointError) { setMessage(pointError.message); setSavingGratitude(false); return; }
       setPoints(p => p + 1);
     }
-    setGratitudeSaved(true);
-    setMessage("+1 momentum · Gratitude saved.");
-    setSavingGratitude(false);
+    setGratitudeSaved(true); setMessage("+1 momentum · Gratitude saved."); setSavingGratitude(false);
   }
 
   async function award(name: string, value: number, ruleKey?: string) {
     const earnedKey = ruleKey || name;
-    if (earned.includes(earnedKey)) return;
+    if (earned.includes(earnedKey) || pendingAward === earnedKey) return;
+    setPendingAward(earnedKey);
+    setMessage(`Adding +${value}…`);
+
     const { data } = await supabase.auth.getUser();
-    if (!data.user) return router.replace("/login");
+    if (!data.user) { setPendingAward(null); return router.replace("/login"); }
     const ruleId = rules[earnedKey.toLowerCase()] || rules[name.toLowerCase()];
-    if (!ruleId) { setMessage("Rule not found. Your account may need to be refreshed."); return; }
+    if (!ruleId) { setPendingAward(null); setMessage("Rule not found. Refresh and try again."); return; }
     const today = localDate();
     const { data: existing } = await supabase.from("gameify_events").select("id").eq("user_id", data.user.id).eq("rule_id", ruleId).eq("event_date", today).maybeSingle();
-    if (existing) return;
+    if (existing) {
+      setEarned(e => e.includes(earnedKey) ? e : [...e, earnedKey]);
+      setPendingAward(null);
+      setMessage("Already counted today.");
+      return;
+    }
     const { error: eventError } = await supabase.from("gameify_events").insert({ user_id: data.user.id, rule_id: ruleId, points: value });
-    if (eventError) { setMessage(eventError.message); return; }
+    if (eventError) { setPendingAward(null); setMessage(eventError.message); return; }
+    setPoints(p => p + value);
+    setEarned(e => [...e, earnedKey]);
+    setPendingAward(null);
+    setMessage(`✓ +${value} added · ${name}`);
     const { error } = await supabase.from("point_transactions").insert({ user_id: data.user.id, amount: value, reason: earnedKey, event_date: today });
-    if (error) { setMessage(error.message); return; }
-    setPoints(p => p + value); setEarned(e => [...e, earnedKey]); setMessage(`+${value} points earned.`);
+    if (error) setMessage(`Saved the behavior, but points sync failed: ${error.message}`);
   }
 
   async function spend(name: string, value: number) {
-    if (points < Math.abs(value)) return;
+    if (points < Math.abs(value)) { setMessage(`You need ${Math.abs(value) - points} more points.`); return; }
     const { data } = await supabase.auth.getUser();
     if (!data.user) return router.replace("/login");
     const today = localDate();
@@ -189,45 +183,27 @@ export default function Home() {
         <h1>Build a better day.</h1>
         <p>One day at a time. One decision at a time.</p>
       </div>
-      <div className="today-actions">
-        <button className="momentum-tile" onClick={() => setShowGameify(true)} aria-label="Open Momentum">
-          <div className="momentum-label">MOMENTUM</div>
-          <div className="momentum-points">{points} pts</div>
-          <div className="momentum-sub">Level {level} · {points % 25}/25 to next level</div>
-        </button>
-      </div>
+      <div className="today-actions"><button className="momentum-tile" onClick={() => setShowGameify(true)} aria-label="Open Momentum"><div className="momentum-label">MOMENTUM</div><div className="momentum-points">{points} pts</div><div className="momentum-sub">Level {level} · {points % 25}/25 to next level</div></button></div>
     </header>
 
-    <section className="today-anchor">
-      <div className="today-anchor-eyebrow">TODAY&apos;S PRINCIPLE</div>
-      <p>{todayPrinciple.text}</p>
-      <div className="today-principle-source">{todayPrinciple.source}</div>
-      <div className="today-principle-practice"><strong>Practice:</strong> {todayPrinciple.practice}</div>
-    </section>
-
-    <section className="today-one-thing" aria-label="Today's one thing">
-      <div className="today-anchor-eyebrow">ONE THING THAT MATTERS</div>
-      <h2>{oneThing || "Choose the single action that would make today meaningfully better."}</h2>
-      <p>Don't solve everything. Move the most important thing forward.</p>
-    </section>
+    <section className="today-anchor"><div className="today-anchor-eyebrow">TODAY&apos;S PRINCIPLE</div><p>{todayPrinciple.text}</p><div className="today-principle-source">{todayPrinciple.source}</div><div className="today-principle-practice"><strong>Practice:</strong> {todayPrinciple.practice}</div></section>
+    <section className="today-one-thing" aria-label="Today's one thing"><div className="today-anchor-eyebrow">ONE THING THAT MATTERS</div><h2>{oneThing || "Choose the single action that would make today meaningfully better."}</h2><p>Don't solve everything. Move the most important thing forward.</p></section>
 
     <section className="today-journal-grid">
-      <div className="today-card">
-        <div className="today-card-eyebrow">DAILY CHECK-IN</div>
-        <h2>How are you right now?</h2>
-        <input aria-label="Mood" type="range" min="1" max="10" value={mood} onChange={e => { setMood(Number(e.target.value)); setCheckInSaved(false); }} />
-        <div className="mood-value">{mood}/10</div>
-        <button className={`save-button ${checkInSaved ? "saved" : ""}`} onClick={saveCheckIn} disabled={savingCheckIn || checkInSaved}>{savingCheckIn ? "Saving…" : checkInSaved ? "✓ Saved +1" : "Save check-in +1"}</button>
-      </div>
-      <div className="today-card">
-        <div className="today-card-eyebrow">GRATITUDE</div>
-        <h2>What are you grateful for?</h2>
-        <textarea value={gratitude} onChange={e => { setGratitude(e.target.value); setGratitudeSaved(false); }} placeholder="One thing is enough." />
-        <button className={`save-button ${gratitudeSaved ? "saved" : ""}`} onClick={saveGratitude} disabled={savingGratitude || gratitudeSaved || !gratitude.trim()}>{savingGratitude ? "Saving…" : gratitudeSaved ? "✓ Saved +1" : "Save gratitude +1"}</button>
-      </div>
+      <div className="today-card"><div className="today-card-eyebrow">DAILY CHECK-IN</div><h2>How are you right now?</h2><input aria-label="Mood" type="range" min="1" max="10" value={mood} onChange={e => { setMood(Number(e.target.value)); setCheckInSaved(false); }} /><div className="mood-value">{mood}/10</div><button className={`save-button ${checkInSaved ? "saved" : ""}`} onClick={saveCheckIn} disabled={savingCheckIn || checkInSaved}>{savingCheckIn ? "Saving…" : checkInSaved ? "✓ Saved +1" : "Save check-in +1"}</button></div>
+      <div className="today-card"><div className="today-card-eyebrow">GRATITUDE</div><h2>What are you grateful for?</h2><textarea value={gratitude} onChange={e => { setGratitude(e.target.value); setGratitudeSaved(false); }} placeholder="One thing is enough." /><button className={`save-button ${gratitudeSaved ? "saved" : ""}`} onClick={saveGratitude} disabled={savingGratitude || gratitudeSaved || !gratitude.trim()}>{savingGratitude ? "Saving…" : gratitudeSaved ? "✓ Saved +1" : "Save gratitude +1"}</button></div>
     </section>
 
-    {showGameify && <div role="dialog" aria-modal="true" className="gameify-modal"><div className="gameify-panel"><div className="gameify-head"><div><div className="today-card-eyebrow">MOMENTUM</div><h2>Build momentum. Spend intentionally.</h2></div><button className="modal-close" onClick={() => setShowGameify(false)} aria-label="Close">×</button></div><p>Points reinforce behaviors that make your life better. Discretionary choices have an opportunity cost.</p><h3>Earn</h3>{actions.map(a => <button key={a.name} onClick={() => award(a.name, a.points, a.key)} disabled={earned.includes(a.key)} className={`gameify-row ${earned.includes(a.key) ? "earned" : ""}`}><b>{a.icon} {a.name}</b><span>{a.detail}</span><strong>+{a.points}</strong></button>)}<h3>Spend</h3>{costs.map(c => <button key={c.name} onClick={() => spend(c.name, c.points)} disabled={points < Math.abs(c.points)} className="gameify-row"><b>{c.icon} {c.name}</b><span>{c.detail}</span><strong>{c.points}</strong>{c.name === "Alcohol" && <small>Today: {alcoholToday} drink{alcoholToday === 1 ? "" : "s"} · {alcoholToday * 4} points spent</small>}</button>)}<div className="gameify-balance">Balance: {points} points · Level {level}</div></div></div>}
+    {showGameify && <div role="dialog" aria-modal="true" className="gameify-modal"><div className="gameify-panel">
+      <div className="gameify-head"><div><div className="today-card-eyebrow">MOMENTUM</div><h2>Build momentum. Spend intentionally.</h2></div><button className="modal-close" onClick={() => setShowGameify(false)} aria-label="Close">×</button></div>
+      <p>Points reinforce behaviors that make your life better. Discretionary choices have an opportunity cost.</p>
+      <h3>Earn</h3>
+      <div className="gameify-actions" aria-live="polite">{actions.map(a => { const done = earned.includes(a.key); const pending = pendingAward === a.key; return <button key={a.name} onClick={() => award(a.name, a.points, a.key)} disabled={done || pending} className={`gameify-row ${done ? "earned" : ""} ${pending ? "pending" : ""}`} aria-label={done ? `${a.name}, added today` : pending ? `Adding ${a.name}` : `Add ${a.name}, ${a.points} points`}><span className="gameify-main"><b>{a.icon} {a.name}</b><small>{a.detail}</small></span><span className="gameify-action-label">{done ? `✓ Added +${a.points}` : pending ? "Adding…" : "Tap to add"}</span></button>; })}</div>
+      <h3>Spend</h3>
+      <div className="gameify-actions">{costs.map(c => <button key={c.name} onClick={() => spend(c.name, c.points)} disabled={points < Math.abs(c.points)} className="gameify-row"><span className="gameify-main"><b>{c.icon} {c.name}</b><small>{c.detail}</small></span><span className="gameify-action-label">−{Math.abs(c.points)}</span>{c.name === "Alcohol" && <small className="gameify-meta">Today: {alcoholToday} drink{alcoholToday === 1 ? "" : "s"} · {alcoholToday * 4} points spent</small>}</button>)}</div>
+      <div className="gameify-balance">Balance: {points} points · Level {level}</div>
+      {message && <div className={`gameify-feedback ${message.startsWith("✓") ? "success" : ""}`} role="status">{message}</div>}
+    </div></div>}
 
     <style jsx>{`
       .today-principle-source { margin-top: 10px; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; opacity: .7; }
@@ -235,6 +211,22 @@ export default function Home() {
       .today-one-thing { margin: 0 0 24px; padding: 22px 24px; border: 1px solid #e7e5e0; border-radius: 16px; background: #fff; }
       .today-one-thing h2 { margin: 8px 0 6px; font-size: 24px; line-height: 1.2; }
       .today-one-thing p { margin: 0; font-size: 14px; line-height: 1.55; opacity: .72; }
+      .gameify-actions { display: grid; gap: 8px; }
+      .gameify-row { width: 100%; display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 14px; align-items: center; text-align: left; color: #171717; border: 1px solid #e2dfd8; background: white; border-radius: 14px; padding: 14px; margin-bottom: 0; cursor: pointer; transition: transform .12s ease, border-color .12s ease, background .12s ease, box-shadow .12s ease; touch-action: manipulation; }
+      .gameify-row:hover:not(:disabled) { border-color: #bdb8ae; box-shadow: 0 2px 8px rgba(23,23,23,.06); }
+      .gameify-row:active:not(:disabled) { transform: scale(.985); background: #f7f5f1; }
+      .gameify-row:focus-visible { outline: 3px solid rgba(166,107,31,.22); outline-offset: 2px; border-color: #a66b1f; }
+      .gameify-row.pending { background: #f5f3ef; border-color: #cfc9bf; }
+      .gameify-row.earned { background: #f0eee9; border-color: #d8d4cc; cursor: default; }
+      .gameify-main { min-width: 0; display: grid; gap: 4px; }
+      .gameify-main b { font-size: 16px; line-height: 1.25; }
+      .gameify-main small { color: #6b6b6b; line-height: 1.45; font-size: 13px; }
+      .gameify-action-label { flex: 0 0 auto; color: #6b6b6b; font-size: 12px; font-weight: 800; white-space: nowrap; }
+      .gameify-row.earned .gameify-action-label { color: #7b4d11; }
+      .gameify-row.pending .gameify-action-label { color: #171717; }
+      .gameify-meta { grid-column: 1 / -1; color: #6b6b6b; font-size: 12px; }
+      .gameify-feedback { position: sticky; bottom: 0; margin-top: 12px; padding: 11px 13px; border-radius: 10px; background: #171717; color: white; text-align: center; font-size: 13px; font-weight: 700; box-shadow: 0 4px 18px rgba(0,0,0,.14); }
+      .gameify-feedback.success { background: #f0dfbf; color: #7b4d11; }
       @media (max-width: 640px) {
         .today-header { align-items: flex-start; gap: 10px; }
         .today-title-group { min-width: 0; flex: 1 1 auto; }
@@ -244,6 +236,13 @@ export default function Home() {
         .momentum-sub { white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
         .today-one-thing { padding: 18px; }
         .today-one-thing h2 { font-size: 20px; }
+        .gameify-modal { padding: 12px; align-items: end; }
+        .gameify-panel { max-height: 92vh; border-radius: 20px 20px 14px 14px; padding: 20px 16px calc(20px + env(safe-area-inset-bottom)); }
+        .gameify-head h2 { font-size: 26px; }
+        .gameify-row { grid-template-columns: minmax(0,1fr) auto; padding: 14px 12px; min-height: 76px; }
+        .gameify-main b { font-size: 15px; }
+        .gameify-main small { font-size: 12px; }
+        .gameify-action-label { font-size: 11px; }
       }
     `}</style>
   </main>;
