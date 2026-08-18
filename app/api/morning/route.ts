@@ -1,5 +1,21 @@
 import { createClient } from "@/lib/supabase/server";
 
+const IDENTITY_SYSTEM = `You are the identity coach inside a persistent personal AI coaching app. Choose ONE identity focus for today based on the user's profile, durable memories, recent daily logs, recent evening reflections, recent identity-loop history, and recent coaching history.
+
+The user wants to keep a three-time written affirmation exercise. Do not remove or replace that. Make the affirmation, context, question, and behavioral proof adaptive so the exercise does not become repetitive wallpaper.
+
+Choose the identity with the highest leverage TODAY. Prefer one of these core identities: discipline, composure, builder, connection, presence, health. You may make the title more specific while keeping one of those keys.
+
+Return exactly six single-line fields and nothing else:
+IDENTITY_KEY: one of discipline, composure, builder, connection, presence, health
+IDENTITY_TITLE: a first-person identity statement
+IDENTITY_PROMPT: one short sentence describing the identity behaviorally
+WHY_TODAY: 1-2 sentences explaining why this identity matters today based on actual context
+QUESTION: one adaptive reflection question for the user
+COMMITMENT_PROMPT: one short prompt asking for one specific behavioral proof today
+
+Be direct, personal, and evidence-based. Do not diagnose. Do not manufacture certainty. Do not use generic motivational language.`;
+
 const MORNING_SYSTEM = `You are the user's morning coach. Build a realistic, energizing plan for TODAY using the user's long-term profile, durable memories, recent daily logs, recent evening reflections, identity-loop history, recent coaching history, and recent daily-plan completion history.
 
 The purpose is not maximum productivity. The purpose is to make today a genuinely good day while moving the user's life forward.
@@ -64,6 +80,34 @@ function completionSummary(plans: any[]) {
   });
 }
 
+function parseIdentity(text: string) {
+  const get = (key: string) => text.match(new RegExp(`^${key}:\\s*(.+)$`, "im"))?.[1]?.trim() || "";
+  const identityKey = get("IDENTITY_KEY");
+  const allowed = ["discipline", "composure", "builder", "connection", "presence", "health"];
+  return {
+    key: allowed.includes(identityKey) ? identityKey : "discipline",
+    title: get("IDENTITY_TITLE") || "I am disciplined.",
+    prompt: get("IDENTITY_PROMPT") || "I do what I say I'm going to do, especially when I don't feel like it.",
+    whyToday: get("WHY_TODAY") || "Use today to create one small piece of evidence for the person you are becoming.",
+    question: get("QUESTION") || "Where would following through matter most today?",
+    commitmentPrompt: get("COMMITMENT_PROMPT") || "What specific action will you use as today's proof?",
+  };
+}
+
+async function generateIdentityCoaching(context: string) {
+  try {
+    const response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${process.env.OPENAI_API_KEY}` },
+      body: JSON.stringify({ model: process.env.OPENAI_MODEL || "gpt-5.6", instructions: IDENTITY_SYSTEM, input: [{ role: "user", content: "Choose today's adaptive identity focus from this persistent coaching context:\n" + context }], max_output_tokens: 300 }),
+    });
+    if (!response.ok) return parseIdentity("");
+    return parseIdentity(extractText(await response.json().catch(() => ({}))));
+  } catch {
+    return parseIdentity("");
+  }
+}
+
 async function generateBehavioralInsight(context: string) {
   try {
     const response = await fetch("https://api.openai.com/v1/responses", {
@@ -87,28 +131,47 @@ export async function POST(request: Request) {
 
     const body = await request.json().catch(() => ({}));
     const requestedDate = typeof body?.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.date) ? body.date : null;
-    const today = requestedDate || new Date().toISOString().slice(0, 10);
+    const today = requestedDate || new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
 
-    const [{ data: profile }, { data: recent }, { data: memories }, { data: history }, { data: recentPlans }, { data: existingToday }, { data: identityLoops }] = await Promise.all([
+    const [{ data: profile }, { data: recent }, { data: memories }, { data: history }, { data: recentPlans }, { data: existingToday }, { data: identityLoops }, { data: todayIdentity }] = await Promise.all([
       supabase.from("profiles").select("display_name,values,vision,goals,motivations,challenges,coaching_style,identity_statement").eq("id", user.id).maybeSingle(),
       supabase.from("daily_logs").select("log_date,mood,energy,gratitude,focus,controllable,uncontrollable,intention,evening_win,evening_lesson,evening_let_go,evening_note,evening_completed,evening_positive_loops").eq("user_id", user.id).order("log_date", { ascending: false }).limit(7),
       supabase.from("coach_memories").select("category,content,importance,updated_at").eq("user_id", user.id).order("importance", { ascending: false }).order("updated_at", { ascending: false }).limit(40),
       supabase.from("coach_messages").select("role,content,created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(24),
       supabase.from("daily_plans").select("plan_date,title,items,source,updated_at").eq("user_id", user.id).order("plan_date", { ascending: false }).limit(7),
       supabase.from("daily_plans").select("id,items").eq("user_id", user.id).eq("plan_date", today).maybeSingle(),
-      supabase.from("identity_loops").select("loop_date,identity_key,identity_title,repetitions,proof").eq("user_id", user.id).order("loop_date", { ascending: false }).limit(21),
+      supabase.from("identity_loops").select("loop_date,identity_key,identity_title,repetitions,proof,why_today,adaptive_question,adaptive_answer,commitment,commitment_result,commitment_reflection").eq("user_id", user.id).order("loop_date", { ascending: false }).limit(21),
+      supabase.from("identity_loops").select("id,identity_key,identity_title,repetitions,proof,why_today,adaptive_question,adaptive_answer,commitment,commitment_result,commitment_reflection").eq("user_id", user.id).eq("loop_date", today).maybeSingle(),
     ]);
 
     const contextData = { today, profile: profile || {}, durable_memories: memories || [], recent_daily_logs: recent || [], identity_loop_history: identityLoops || [], recent_coach_history: (history || []).reverse(), recent_daily_plan_completion: completionSummary(recentPlans || []) };
     const context = JSON.stringify(contextData);
     const behavioralInsight = await generateBehavioralInsight(context);
+    const identityCoaching = await generateIdentityCoaching(JSON.stringify({ ...contextData, latest_behavioral_insight: behavioralInsight || null }));
 
     if (behavioralInsight) {
       await supabase.from("coach_memories").delete().eq("user_id", user.id).eq("category", "behavioral_insight").eq("source", "evening-reflection");
       await supabase.from("coach_memories").insert({ user_id: user.id, category: "behavioral_insight", content: behavioralInsight, source: "evening-reflection", importance: 7 });
     }
 
-    const enhancedContext = JSON.stringify({ ...contextData, latest_behavioral_insight: behavioralInsight || null });
+    await supabase.from("identity_loops").upsert({
+      user_id: user.id,
+      loop_date: today,
+      focus_date: today,
+      identity_key: identityCoaching.key,
+      identity_title: identityCoaching.title,
+      repetitions: Array.isArray(todayIdentity?.repetitions) ? todayIdentity.repetitions : ["", "", ""],
+      proof: todayIdentity?.proof || todayIdentity?.commitment || null,
+      why_today: identityCoaching.whyToday,
+      adaptive_question: identityCoaching.question,
+      adaptive_answer: todayIdentity?.adaptive_answer || null,
+      commitment: todayIdentity?.commitment || todayIdentity?.proof || null,
+      commitment_result: todayIdentity?.commitment_result || null,
+      commitment_reflection: todayIdentity?.commitment_reflection || null,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "user_id,loop_date,identity_key" });
+
+    const enhancedContext = JSON.stringify({ ...contextData, latest_behavioral_insight: behavioralInsight || null, todays_identity_focus: identityCoaching });
 
     const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
@@ -135,7 +198,7 @@ export async function POST(request: Request) {
     const { error: planError } = await supabase.from("daily_plans").upsert({ user_id: user.id, plan_date: today, title: "Today's Plan", items, source: "morning-coach", updated_at: new Date().toISOString() }, { onConflict: "user_id,plan_date" });
     if (planError) console.error("Daily plan save error:", planError);
 
-    return Response.json({ message: text, behavioralInsight, plan: { plan_date: today, title: "Today's Plan", items } });
+    return Response.json({ message: text, behavioralInsight, identityCoaching, plan: { plan_date: today, title: "Today's Plan", items } });
   } catch (error) {
     console.error("Morning coach error:", error);
     return Response.json({ error: "The morning coach encountered an unexpected error." }, { status: 500 });
