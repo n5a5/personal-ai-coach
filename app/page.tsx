@@ -145,12 +145,9 @@ export default function Home() {
     const today = localDate();
     const { error } = await supabase.from("daily_logs").upsert({ user_id: data.user.id, log_date: today, mood, gratitude }, { onConflict: "user_id,log_date" });
     if (error) { setMessage(friendlyError(error)); setSavingCheckIn(false); return; }
-    const { data: existing } = await supabase.from("point_transactions").select("id").eq("user_id", data.user.id).eq("reason", "Daily check-in").eq("event_date", today).maybeSingle();
-    if (!existing) {
-      const { error: pointError } = await supabase.from("point_transactions").insert({ user_id: data.user.id, amount: 1, reason: "Daily check-in", event_date: today });
-      if (pointError && !/duplicate key|unique constraint/i.test(pointError.message)) { setMessage(friendlyError(pointError)); setSavingCheckIn(false); return; }
-      if (!pointError) setPoints(p => p + 1);
-    }
+    const { data: pointResult, error: pointError } = await supabase.rpc("record_daily_point", { p_reason: "Daily check-in", p_amount: 1, p_event_date: today });
+    if (pointError) { setMessage(friendlyError(pointError)); setSavingCheckIn(false); return; }
+    if ((pointResult as { status?: string } | null)?.status !== "already_recorded") setPoints(p => p + 1);
     setCheckInSaved(true); setMessage("✓ +1 · Daily check-in saved."); setSavingCheckIn(false);
   }
 
@@ -162,12 +159,9 @@ export default function Home() {
     const today = localDate();
     const { error } = await supabase.from("daily_logs").upsert({ user_id: data.user.id, log_date: today, mood, gratitude }, { onConflict: "user_id,log_date" });
     if (error) { setMessage(friendlyError(error)); setSavingGratitude(false); return; }
-    const { data: existing } = await supabase.from("point_transactions").select("id").eq("user_id", data.user.id).eq("reason", "Gratitude").eq("event_date", today).maybeSingle();
-    if (!existing) {
-      const { error: pointError } = await supabase.from("point_transactions").insert({ user_id: data.user.id, amount: 1, reason: "Gratitude", event_date: today });
-      if (pointError && !/duplicate key|unique constraint/i.test(pointError.message)) { setMessage(friendlyError(pointError)); setSavingGratitude(false); return; }
-      if (!pointError) setPoints(p => p + 1);
-    }
+    const { data: pointResult, error: pointError } = await supabase.rpc("record_daily_point", { p_reason: "Gratitude", p_amount: 1, p_event_date: today });
+    if (pointError) { setMessage(friendlyError(pointError)); setSavingGratitude(false); return; }
+    if ((pointResult as { status?: string } | null)?.status !== "already_recorded") setPoints(p => p + 1);
     setGratitudeSaved(true); setMessage("✓ +1 · Gratitude saved."); setSavingGratitude(false);
   }
 
