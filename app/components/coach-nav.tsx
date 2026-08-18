@@ -9,6 +9,7 @@ const links = [
   ["/evening", "Evening", "☾"],
   ["/reset", "Reset", "↺"],
   ["/coach", "Coach", "✦"],
+  ["/learning", "Learning", "◌"],
   ["/profile", "Profile", "○"],
   ["/reference", "Reference", "?"],
 ];
