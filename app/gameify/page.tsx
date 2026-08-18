@@ -11,7 +11,6 @@ const earnRules = [
   { name: "Workout — 45–60 min", points: 8, detail: "A substantial training session." },
   { name: "Family Connection", points: 3, detail: "Intentional time with wife or kids." },
   { name: "Meditation", points: 2, detail: "Quiet the mind deliberately." },
-  { name: "Journaling", points: 2, detail: "Meaningful reflection." },
   { name: "Reading / Learning", points: 2, detail: "Focused reading or learning." },
 ];
 
