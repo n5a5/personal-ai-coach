@@ -26,9 +26,14 @@ function localDate() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 }
 
+function normalizeTitle(title: string) {
+  const cleaned = (title || "I am disciplined.").trim().replace(/\\s+(by|when|because|so that|to)\\s*$/i, "").trim();
+  return cleaned.endsWith(".") ? cleaned : `${cleaned}.`;
+}
+
 export default function IdentityLoop({ coaching }: { coaching?: IdentityCoaching | null }) {
   const supabase = createClient();
-  const [focus, setFocus] = useState<IdentityCoaching>(coaching || fallback);
+  const [focus, setFocus] = useState<IdentityCoaching>(coaching ? { ...coaching, title: normalizeTitle(coaching.title) } : fallback);
   const [entries, setEntries] = useState<string[]>(["", "", ""]);
   const [commitment, setCommitment] = useState("");
   const [adaptiveAnswer, setAdaptiveAnswer] = useState("");
@@ -38,7 +43,7 @@ export default function IdentityLoop({ coaching }: { coaching?: IdentityCoaching
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    if (coaching) setFocus(coaching);
+    if (coaching) setFocus({ ...coaching, title: normalizeTitle(coaching.title) });
   }, [coaching]);
 
   useEffect(() => {
@@ -47,7 +52,7 @@ export default function IdentityLoop({ coaching }: { coaching?: IdentityCoaching
       if (!userData.user) { setLoading(false); return; }
       const { data, error } = await supabase
         .from("identity_loops")
-        .select("identity_key,identity_title,repetitions,proof,why_today,adaptive_question,adaptive_answer,commitment")
+        .select("identity_key,identity_title,identity_prompt,repetitions,proof,why_today,adaptive_question,adaptive_answer,commitment")
         .eq("user_id", userData.user.id)
         .eq("loop_date", localDate())
         .order("updated_at", { ascending: false })
@@ -58,11 +63,10 @@ export default function IdentityLoop({ coaching }: { coaching?: IdentityCoaching
         setFocus(current => ({
           ...current,
           key: data.identity_key || current.key,
-          title: data.identity_title || current.title,
+          title: normalizeTitle(data.identity_title || current.title),
+          prompt: data.identity_prompt || current.prompt,
           whyToday: data.why_today || current.whyToday,
           question: data.adaptive_question || current.question,
-          prompt: current.prompt,
-          commitmentPrompt: current.commitmentPrompt,
         }));
         setEntries(Array.from({ length: 3 }, (_, i) => data.repetitions?.[i] || ""));
         setAdaptiveAnswer(data.adaptive_answer || "");
@@ -92,7 +96,8 @@ export default function IdentityLoop({ coaching }: { coaching?: IdentityCoaching
       loop_date: today,
       focus_date: today,
       identity_key: focus.key,
-      identity_title: focus.title,
+      identity_title: normalizeTitle(focus.title),
+      identity_prompt: focus.prompt,
       repetitions: entries,
       why_today: focus.whyToday,
       adaptive_question: focus.question,
