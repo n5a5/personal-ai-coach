@@ -6,9 +6,11 @@ The user wants to keep a three-time written affirmation exercise. Do not remove 
 
 Choose the identity with the highest leverage TODAY. Prefer one of these core identities: discipline, composure, builder, connection, presence, health. You may make the title more specific while keeping one of those keys.
 
+IDENTITY_TITLE MUST be a complete, natural first-person identity statement. Never end it with an unfinished connector such as "by", "when", "because", "so that", or "to". For example, prefer "I make movement automatic." rather than "I make movement automatic by".
+
 Return exactly six single-line fields and nothing else:
 IDENTITY_KEY: one of discipline, composure, builder, connection, presence, health
-IDENTITY_TITLE: a first-person identity statement
+IDENTITY_TITLE: a complete first-person identity statement
 IDENTITY_PROMPT: one short sentence describing the identity behaviorally
 WHY_TODAY: 1-2 sentences explaining why this identity matters today based on actual context
 QUESTION: one adaptive reflection question for the user
@@ -84,9 +86,11 @@ function parseIdentity(text: string) {
   const get = (key: string) => text.match(new RegExp(`^${key}:\\s*(.+)$`, "im"))?.[1]?.trim() || "";
   const identityKey = get("IDENTITY_KEY");
   const allowed = ["discipline", "composure", "builder", "connection", "presence", "health"];
+  const rawTitle = get("IDENTITY_TITLE") || "I am disciplined.";
+  const title = rawTitle.replace(/\\s+(by|when|because|so that|to)\\s*$/i, "").trim();
   return {
     key: allowed.includes(identityKey) ? identityKey : "discipline",
-    title: get("IDENTITY_TITLE") || "I am disciplined.",
+    title: title.endsWith(".") ? title : `${title}.`,
     prompt: get("IDENTITY_PROMPT") || "I do what I say I'm going to do, especially when I don't feel like it.",
     whyToday: get("WHY_TODAY") || "Use today to create one small piece of evidence for the person you are becoming.",
     question: get("QUESTION") || "Where would following through matter most today?",
@@ -140,36 +144,50 @@ export async function POST(request: Request) {
       supabase.from("coach_messages").select("role,content,created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(24),
       supabase.from("daily_plans").select("plan_date,title,items,source,updated_at").eq("user_id", user.id).order("plan_date", { ascending: false }).limit(7),
       supabase.from("daily_plans").select("id,items").eq("user_id", user.id).eq("plan_date", today).maybeSingle(),
-      supabase.from("identity_loops").select("loop_date,identity_key,identity_title,repetitions,proof,why_today,adaptive_question,adaptive_answer,commitment,commitment_result,commitment_reflection").eq("user_id", user.id).order("loop_date", { ascending: false }).limit(21),
-      supabase.from("identity_loops").select("id,identity_key,identity_title,repetitions,proof,why_today,adaptive_question,adaptive_answer,commitment,commitment_result,commitment_reflection").eq("user_id", user.id).eq("loop_date", today).maybeSingle(),
+      supabase.from("identity_loops").select("loop_date,identity_key,identity_title,identity_prompt,repetitions,proof,why_today,adaptive_question,adaptive_answer,commitment,commitment_result,commitment_reflection").eq("user_id", user.id).order("loop_date", { ascending: false }).limit(21),
+      supabase.from("identity_loops").select("id,identity_key,identity_title,identity_prompt,repetitions,proof,why_today,adaptive_question,adaptive_answer,commitment,commitment_result,commitment_reflection").eq("user_id", user.id).eq("loop_date", today).maybeSingle(),
     ]);
 
     const contextData = { today, profile: profile || {}, durable_memories: memories || [], recent_daily_logs: recent || [], identity_loop_history: identityLoops || [], recent_coach_history: (history || []).reverse(), recent_daily_plan_completion: completionSummary(recentPlans || []) };
     const context = JSON.stringify(contextData);
     const behavioralInsight = await generateBehavioralInsight(context);
-    const identityCoaching = await generateIdentityCoaching(JSON.stringify({ ...contextData, latest_behavioral_insight: behavioralInsight || null }));
+
+    // Once today's identity exists, keep it stable. Reopening Morning should not silently change the affirmation.
+    const identityCoaching = todayIdentity
+      ? {
+          key: todayIdentity.identity_key,
+          title: todayIdentity.identity_title,
+          prompt: todayIdentity.identity_prompt || "I do what I say I'm going to do, especially when I don't feel like it.",
+          whyToday: todayIdentity.why_today || "Use today to create one small piece of evidence for the person you are becoming.",
+          question: todayIdentity.adaptive_question || "Where would following through matter most today?",
+          commitmentPrompt: "What specific action will you use as today's proof?",
+        }
+      : await generateIdentityCoaching(JSON.stringify({ ...contextData, latest_behavioral_insight: behavioralInsight || null }));
 
     if (behavioralInsight) {
       await supabase.from("coach_memories").delete().eq("user_id", user.id).eq("category", "behavioral_insight").eq("source", "evening-reflection");
       await supabase.from("coach_memories").insert({ user_id: user.id, category: "behavioral_insight", content: behavioralInsight, source: "evening-reflection", importance: 7 });
     }
 
-    await supabase.from("identity_loops").upsert({
-      user_id: user.id,
-      loop_date: today,
-      focus_date: today,
-      identity_key: identityCoaching.key,
-      identity_title: identityCoaching.title,
-      repetitions: Array.isArray(todayIdentity?.repetitions) ? todayIdentity.repetitions : ["", "", ""],
-      proof: todayIdentity?.proof || todayIdentity?.commitment || null,
-      why_today: identityCoaching.whyToday,
-      adaptive_question: identityCoaching.question,
-      adaptive_answer: todayIdentity?.adaptive_answer || null,
-      commitment: todayIdentity?.commitment || todayIdentity?.proof || null,
-      commitment_result: todayIdentity?.commitment_result || null,
-      commitment_reflection: todayIdentity?.commitment_reflection || null,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: "user_id,loop_date,identity_key" });
+    if (!todayIdentity) {
+      await supabase.from("identity_loops").upsert({
+        user_id: user.id,
+        loop_date: today,
+        focus_date: today,
+        identity_key: identityCoaching.key,
+        identity_title: identityCoaching.title,
+        identity_prompt: identityCoaching.prompt,
+        repetitions: ["", "", ""],
+        proof: null,
+        why_today: identityCoaching.whyToday,
+        adaptive_question: identityCoaching.question,
+        adaptive_answer: null,
+        commitment: null,
+        commitment_result: null,
+        commitment_reflection: null,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "user_id,loop_date,identity_key" });
+    }
 
     const enhancedContext = JSON.stringify({ ...contextData, latest_behavioral_insight: behavioralInsight || null, todays_identity_focus: identityCoaching });
 
