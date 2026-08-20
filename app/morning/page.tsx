@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
 import IdentityLoop from "@/app/components/identity-loop";
 
 type IdentityCoaching = {
@@ -58,26 +59,86 @@ function renderCoachMessage(message: string) {
   return blocks;
 }
 
+function messageFromSavedPlan(items: any[], identity?: any) {
+  const lines: string[] = [];
+  if (identity?.why_today) lines.push(`MORNING READ — ${identity.why_today}`);
+  const sections = [
+    ["BODY", "body"],
+    ["MIND", "mind"],
+    ["IMPORTANT", "important"],
+    ["LIFE", "life"],
+  ] as const;
+  for (const [label, id] of sections) {
+    const item = items.find((entry: any) => entry?.id === id);
+    if (item?.detail) lines.push(`${label} — ${item.detail}`);
+  }
+  return lines.join("\n\n");
+}
+
 export default function MorningPage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [identityCoaching, setIdentityCoaching] = useState<IdentityCoaching | null>(null);
+  const supabase = createClient();
 
-  async function buildMorning() {
+  async function buildMorning(force = false) {
     setLoading(true);
     setError("");
     try {
+      const today = localDate();
+      const cacheKey = `morning-coach:${today}`;
+
+      if (!force) {
+        try {
+          const cached = localStorage.getItem(cacheKey);
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            if (parsed?.message) {
+              setMessage(parsed.message);
+              setIdentityCoaching(parsed.identityCoaching || null);
+              setLoading(false);
+              return;
+            }
+          }
+        } catch {}
+
+        // If today's plan already exists, load it rather than asking the AI
+        // to regenerate today's coaching simply because the user revisited.
+        const [{ data: plan }, { data: identity }] = await Promise.all([
+          supabase.from("daily_plans").select("items").eq("plan_date", today).maybeSingle(),
+          supabase.from("identity_loops").select("identity_key,identity_title,why_today,adaptive_question").eq("loop_date", today).order("updated_at", { ascending: false }).limit(1).maybeSingle(),
+        ]);
+
+        if (plan?.items?.length) {
+          const savedIdentity = identity ? {
+            key: identity.identity_key,
+            title: identity.identity_title,
+            prompt: "",
+            whyToday: identity.why_today || "",
+            question: identity.adaptive_question || "",
+            commitmentPrompt: "What specific action will you use as today's proof?",
+          } : null;
+          const savedMessage = messageFromSavedPlan(plan.items, identity);
+          setMessage(savedMessage);
+          setIdentityCoaching(savedIdentity);
+          try { localStorage.setItem(cacheKey, JSON.stringify({ message: savedMessage, identityCoaching: savedIdentity })); } catch {}
+          setLoading(false);
+          return;
+        }
+      }
+
       const response = await fetch("/api/morning", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date: localDate() }),
+        body: JSON.stringify({ date: today, force }),
       });
       const data = await response.json();
       if (data.setup) throw new Error("Live AI is not configured yet.");
       if (!response.ok || data.error) throw new Error(data.error || "Unable to build your morning plan.");
       setMessage(data.message || "");
       setIdentityCoaching(data.identityCoaching || null);
+      try { localStorage.setItem(cacheKey, JSON.stringify({ message: data.message || "", identityCoaching: data.identityCoaching || null })); } catch {}
     } catch (e: any) {
       setError(e?.message || "Unable to build your morning plan.");
     } finally {
@@ -85,7 +146,12 @@ export default function MorningPage() {
     }
   }
 
-  useEffect(() => { buildMorning(); }, []);
+  useEffect(() => { buildMorning(false); }, []);
+
+  function rebuild() {
+    try { localStorage.removeItem(`morning-coach:${localDate()}`); } catch {}
+    buildMorning(true);
+  }
 
   return (
     <main style={{ maxWidth: 860, margin: "0 auto", padding: "28px 20px 90px" }}>
@@ -108,13 +174,13 @@ export default function MorningPage() {
           <div>
             <h2 style={{ marginTop: 0 }}>Morning plan unavailable</h2>
             <p style={{ opacity: .7 }}>{error}</p>
-            <button onClick={buildMorning} style={primaryButton}>Try again</button>
+            <button onClick={() => buildMorning(true)} style={primaryButton}>Try again</button>
           </div>
         ) : (
           <>
             <div className="coach-message">{renderCoachMessage(message)}</div>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 24 }}>
-              <button onClick={buildMorning} style={secondaryButton}>Rebuild my day</button>
+              <button onClick={rebuild} style={secondaryButton}>Refresh today's coaching</button>
               <Link href="/coach" style={{ ...secondaryButton, textDecoration: "none" }}>Talk to my coach</Link>
               <Link href="/" style={{ ...primaryButton, textDecoration: "none" }}>Start today</Link>
             </div>
