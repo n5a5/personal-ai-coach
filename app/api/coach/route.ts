@@ -7,7 +7,7 @@ Help the user become calmer, stronger, healthier, more focused, more present, mo
 
 MEMORY RULES
 - Treat saved memories, profile information, daily logs, evening reflections, identity-loop entries, and prior coach conversations as ongoing context.
-- Shared coaching memory is organized conceptually into five durable layers: identity, goal, pattern, experiment, and lesson.
+- Shared coaching memory uses exactly five durable layers: identity, goal, pattern, experiment, and lesson.
 - Treat identity and goals as current direction; patterns as observations whose confidence should grow with evidence; experiments as active things being tested; lessons as conclusions supported by experience.
 - Distinguish durable facts/preferences from temporary states.
 - Never invent memories.
@@ -60,7 +60,7 @@ Use clean Markdown: short headings, **bold** labels, and concise bullets. Do not
 
 This is coaching, not medical, legal, or financial advice.`;
 
-const MEMORY_SYSTEM = `You maintain durable memory for a personal AI coach. Extract only information from the user's latest message that is genuinely useful for future coaching. Do NOT save temporary moods, one-off plans, transient circumstances, sensitive medical information, legal case details, financial account details, passwords, or secrets. Prefer durable preferences, goals, values, recurring patterns, relationship preferences, coaching preferences, constraints, and meaningful insights. Return ONLY a JSON array of at most 3 items: {"category":"preference|goal|value|pattern|insight|relationship|routine|constraint|other","content":"one concise memory written as a fact about the user","importance":1-5}. Return [] when nothing is durable enough. Do not duplicate an existing memory or infer unstated facts.`;
+const MEMORY_SYSTEM = `You maintain durable memory for a personal AI coach. Extract only information from the user's latest message that is genuinely useful for future coaching. Do NOT save temporary moods, one-off plans, transient circumstances, sensitive medical information, legal case details, financial account details, passwords, or secrets. Prefer durable goals, values, recurring patterns, active experiments, meaningful lessons, identity commitments, and durable coaching preferences. Return ONLY a JSON array of at most 3 items. Every item MUST use exactly one of these categories: identity, goal, pattern, experiment, lesson. Schema: {"category":"identity|goal|pattern|experiment|lesson","content":"one concise memory written as a fact about the user","importance":1-5,"status":"candidate|active|established"}. Rules: patterns are candidate/emerging unless there is clear repeated evidence; experiments are active; identity/goals/lessons are active unless the message clearly establishes them as an experiment or candidate. Return [] when nothing is durable enough. Do not duplicate an existing memory or infer unstated facts.`;
 
 function extractText(data: any) {
   return data.output_text || data.output?.filter((item: any) => item?.type === "message")?.flatMap((item: any) => item.content || [])?.filter((content: any) => content?.type === "output_text" && typeof content.text === "string")?.map((content: any) => content.text)?.join("\n") || "";
@@ -70,7 +70,7 @@ async function getContext(supabase: any, userId: string) {
   const [{ data: profile }, { data: recent }, { data: memories }, { data: history }, { data: identityLoops }] = await Promise.all([
     supabase.from("profiles").select("display_name,values,vision,goals,motivations,challenges,coaching_style,identity_statement").eq("id", userId).maybeSingle(),
     supabase.from("daily_logs").select("log_date,mood,energy,gratitude,focus,controllable,uncontrollable,intention,evening_win,evening_lesson,evening_let_go,evening_note,evening_completed").eq("user_id", userId).order("log_date", { ascending: false }).limit(14),
-    supabase.from("coach_memories").select("category,content,importance,updated_at").eq("user_id", userId).order("importance", { ascending: false }).order("updated_at", { ascending: false }).limit(40),
+    supabase.from("coach_memories").select("category,content,importance,status,confidence,evidence_count,updated_at,source").eq("user_id", userId).order("importance", { ascending: false }).order("updated_at", { ascending: false }).limit(40),
     supabase.from("coach_messages").select("role,content,created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(40),
     supabase.from("identity_loops").select("loop_date,identity_key,identity_title,repetitions,proof,updated_at").eq("user_id", userId).order("loop_date", { ascending: false }).limit(30),
   ]);
@@ -114,15 +114,15 @@ export async function POST(req: Request) {
 
     if (userContent.trim().length >= 20) {
       try {
-        const memoryResponse = await fetch("https://api.openai.com/v1/responses", { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${process.env.OPENAI_API_KEY}` }, body: JSON.stringify({ model: process.env.OPENAI_MEMORY_MODEL || "gpt-5-mini", instructions: MEMORY_SYSTEM + "\n\nEXISTING MEMORIES:\n" + JSON.stringify(context.durable_memories.map((m: any) => m.content)), input: [{ role: "user", content: userContent }], max_output_tokens: 300 }) });
+        const memoryResponse = await fetch("https://api.openai.com/v1/responses", { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${process.env.OPENAI_API_KEY}` }, body: JSON.stringify({ model: process.env.OPENAI_MEMORY_MODEL || "gpt-5-mini", instructions: MEMORY_SYSTEM + "\n\nEXISTING MEMORIES:\n" + JSON.stringify(context.durable_memories.map((m: any) => ({ category: m.category, content: m.content, status: m.status, confidence: m.confidence }))), input: [{ role: "user", content: userContent }], max_output_tokens: 300 }) });
         const memoryData = await memoryResponse.json().catch(() => ({}));
         if (memoryResponse.ok) {
           const raw = extractText(memoryData).trim().replace(/^```json\s*/i, "").replace(/```$/i, "").trim();
           const candidates = JSON.parse(raw);
           if (Array.isArray(candidates)) {
             const sourceMessageId = savedMessages?.find((m: any) => m.role === "user")?.id || null;
-            const valid = candidates.filter((m: any) => m && typeof m.content === "string" && m.content.trim() && typeof m.category === "string" && typeof m.importance === "number" && m.importance >= 1 && m.importance <= 5).slice(0, 3);
-            if (valid.length) await supabase.from("coach_memories").insert(valid.map((m: any) => ({ user_id: user.id, category: m.category, content: m.content.trim(), importance: Math.round(m.importance), source_message_id: sourceMessageId })));
+            const valid = candidates.filter((m: any) => m && m.content?.trim() && ["identity","goal","pattern","experiment","lesson"].includes(m.category) && ["candidate","active","established"].includes(m.status) && typeof m.importance === "number" && m.importance >= 1 && m.importance <= 5).slice(0, 3);
+            if (valid.length) await supabase.from("coach_memories").insert(valid.map((m: any) => ({ user_id: user.id, category: m.category, content: m.content.trim(), importance: Math.round(m.importance), status: m.status, confidence: m.category === "pattern" ? "emerging" : (m.status === "established" ? "strong" : "moderate"), evidence_count: 1, last_evidence_at: new Date().toISOString(), source_message_id: sourceMessageId, source: "app-coach" })));
           }
         }
       } catch (memoryError) { console.error("Memory formation skipped:", memoryError); }
