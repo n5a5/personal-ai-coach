@@ -27,7 +27,7 @@ function localDate() {
 }
 
 function normalizeTitle(title: string) {
-  const cleaned = (title || "I am disciplined.").trim().replace(/\\s+(by|when|because|so that|to)\\s*$/i, "").trim();
+  const cleaned = (title || "I am disciplined.").trim().replace(/\s+(by|when|because|so that|to)\.?\s*$/i, "").trim();
   return cleaned.endsWith(".") ? cleaned : `${cleaned}.`;
 }
 
@@ -37,6 +37,7 @@ export default function IdentityLoop({ coaching }: { coaching?: IdentityCoaching
   const [entries, setEntries] = useState<string[]>(["", "", ""]);
   const [commitment, setCommitment] = useState("");
   const [adaptiveAnswer, setAdaptiveAnswer] = useState("");
+  const [avoidance, setAvoidance] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -52,7 +53,7 @@ export default function IdentityLoop({ coaching }: { coaching?: IdentityCoaching
       if (!userData.user) { setLoading(false); return; }
       const { data, error } = await supabase
         .from("identity_loops")
-        .select("identity_key,identity_title,identity_prompt,repetitions,proof,why_today,adaptive_question,adaptive_answer,commitment")
+        .select("identity_key,identity_title,identity_prompt,repetitions,proof,why_today,adaptive_question,adaptive_answer,commitment,avoidance")
         .eq("user_id", userData.user.id)
         .eq("loop_date", localDate())
         .order("updated_at", { ascending: false })
@@ -71,17 +72,22 @@ export default function IdentityLoop({ coaching }: { coaching?: IdentityCoaching
         setEntries(Array.from({ length: 3 }, (_, i) => data.repetitions?.[i] || ""));
         setAdaptiveAnswer(data.adaptive_answer || "");
         setCommitment(data.commitment || data.proof || "");
-        setSaved(Boolean((data.repetitions || []).some((value: string) => value?.trim()) || data.adaptive_answer || data.commitment || data.proof));
+        setAvoidance(data.avoidance || "");
+        setSaved(Boolean((data.repetitions || []).some((value: string) => value?.trim()) || data.adaptive_answer || data.commitment || data.proof || data.avoidance));
       }
       setLoading(false);
     }
     load();
   }, [supabase]);
 
-  function updateEntry(index: number, value: string) {
-    setEntries(current => current.map((entry, i) => i === index ? value : entry));
+  function clearStatus() {
     setSaved(false);
     setMessage("");
+  }
+
+  function updateEntry(index: number, value: string) {
+    setEntries(current => current.map((entry, i) => i === index ? value : entry));
+    clearStatus();
   }
 
   async function save() {
@@ -102,13 +108,14 @@ export default function IdentityLoop({ coaching }: { coaching?: IdentityCoaching
       why_today: focus.whyToday,
       adaptive_question: focus.question,
       adaptive_answer: adaptiveAnswer.trim() || null,
+      avoidance: avoidance.trim() || null,
       commitment: commitment.trim() || null,
       proof: commitment.trim() || null,
       updated_at: new Date().toISOString(),
     }, { onConflict: "user_id,loop_date,identity_key" });
     if (error) { setMessage(error.message); setSaving(false); return; }
     setSaved(true);
-    setMessage("Identity loop saved. Your coach will use this in future sessions.");
+    setMessage("Morning coaching saved. Your coach will use this in future sessions.");
     setSaving(false);
   }
 
@@ -132,22 +139,29 @@ export default function IdentityLoop({ coaching }: { coaching?: IdentityCoaching
           ))}
         </div>
 
+        <div style={coachQuestion}>
+          <div style={smallLabel}>ONE COURAGEOUS QUESTION</div>
+          <div style={{ marginTop: 5, fontSize: 18, fontWeight: 750, lineHeight: 1.4 }}>What am I avoiding because it's uncomfortable?</div>
+          <div style={{ marginTop: 6, opacity: .62, lineHeight: 1.45 }}>You don't have to solve it right now. Just name it honestly.</div>
+          <textarea value={avoidance} onChange={e => { setAvoidance(e.target.value); clearStatus(); }} placeholder="I'm avoiding…" rows={2} style={textarea} disabled={loading} />
+        </div>
+
         <label style={{ display: "block", marginTop: 16 }}>
           <div style={smallLabel}>COACH'S QUESTION</div>
           <div style={{ margin: "5px 0 9px", fontWeight: 650, lineHeight: 1.45 }}>{focus.question}</div>
-          <textarea value={adaptiveAnswer} onChange={e => { setAdaptiveAnswer(e.target.value); setSaved(false); setMessage(""); }} placeholder="A few honest words…" rows={2} style={textarea} disabled={loading} />
+          <textarea value={adaptiveAnswer} onChange={e => { setAdaptiveAnswer(e.target.value); clearStatus(); }} placeholder="A few honest words…" rows={2} style={textarea} disabled={loading} />
         </label>
 
         <label style={{ display: "block", marginTop: 14 }}>
           <div style={smallLabel}>TODAY'S PROOF</div>
           <div style={{ margin: "5px 0 9px", fontWeight: 650, lineHeight: 1.45 }}>{focus.commitmentPrompt}</div>
-          <input value={commitment} onChange={e => { setCommitment(e.target.value); setSaved(false); setMessage(""); }} placeholder="Make it specific and doable today…" style={input} disabled={loading} />
+          <input value={commitment} onChange={e => { setCommitment(e.target.value); clearStatus(); }} placeholder="Make it specific and doable today…" style={input} disabled={loading} />
         </label>
       </div>
 
       {message && <div role="status" style={{ marginTop: 14, padding: 11, background: "#e9e7e2", borderRadius: 10, fontSize: 13, fontWeight: 700 }}>{message}</div>}
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 18, flexWrap: "wrap" }}>
-        <button onClick={save} disabled={loading || saving} style={primaryButton}>{saving ? "Saving…" : saved ? "✓ Saved for today" : "Save today's identity"}</button>
+        <button onClick={save} disabled={loading || saving} style={primaryButton}>{saving ? "Saving…" : saved ? "✓ Saved for today" : "Save today's coaching"}</button>
         <span style={{ fontSize: 13, opacity: .6 }}>Stored as coaching history. No points.</span>
       </div>
     </section>
@@ -159,6 +173,7 @@ const smallLabel = { fontSize: 11, fontWeight: 800, letterSpacing: 1.3, opacity:
 const card = { background: "white", borderRadius: 22, padding: 28, boxShadow: "0 8px 30px rgba(0,0,0,.06)" };
 const identityCard = { background: "#f7f5f1", borderRadius: 16, padding: 18 };
 const whyBox = { marginTop: 14, padding: "12px 13px", background: "white", borderRadius: 12, border: "1px solid #e7e3dc" };
+const coachQuestion = { marginTop: 18, padding: "16px 14px 14px", background: "white", borderRadius: 12, border: "1px solid #e7e3dc" };
 const input = { width: "100%", boxSizing: "border-box" as const, border: "1px solid #ddd", borderRadius: 10, padding: "11px 12px", background: "white", fontSize: 15 };
-const textarea = { ...input, resize: "vertical" as const, lineHeight: 1.45 };
+const textarea = { ...input, resize: "vertical" as const, lineHeight: 1.45, marginTop: 12 };
 const primaryButton = { border: 0, borderRadius: 10, padding: "11px 15px", background: "#171717", color: "white", cursor: "pointer" };
