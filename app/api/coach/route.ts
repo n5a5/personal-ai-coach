@@ -98,8 +98,15 @@ export async function POST(req: Request) {
     if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
     if (!process.env.OPENAI_API_KEY) return Response.json({ setup: true });
     const body = await req.json();
-    const messages = Array.isArray(body.messages) ? body.messages.slice(-20) : [];
-    if (!messages.length) return Response.json({ error: "No message provided" }, { status: 400 });
+    const rawMessages = Array.isArray(body.messages) ? body.messages.slice(-20) : [];
+    if (!rawMessages.length) return Response.json({ error: "No message provided" }, { status: 400 });
+
+    // Client-side message IDs are Supabase UUIDs, not OpenAI Responses API message IDs.
+    // Strip all persistence metadata before sending input to OpenAI.
+    const messages = rawMessages
+      .filter((message: any) => message && (message.role === "user" || message.role === "assistant") && typeof message.content === "string")
+      .map((message: any) => ({ role: message.role, content: message.content }));
+    if (!messages.length) return Response.json({ error: "No valid coach messages provided" }, { status: 400 });
 
     const context = await getContext(supabase, user.id);
     const response = await fetch("https://api.openai.com/v1/responses", {
