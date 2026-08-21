@@ -75,12 +75,35 @@ function messageFromSavedPlan(items: any[], identity?: any) {
   return lines.join("\n\n");
 }
 
+function getTodayOneThing(items: any[]) {
+  const important = items.find((item: any) => item?.id === "important");
+  return important?.detail || "Choose one action that would make today meaningfully better.";
+}
+
 export default function MorningPage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [identityCoaching, setIdentityCoaching] = useState<IdentityCoaching | null>(null);
+  const [todayOneThing, setTodayOneThing] = useState("");
+  const [noticing, setNoticing] = useState("");
   const supabase = createClient();
+
+  async function loadLatestPattern() {
+    try {
+      const { data } = await supabase
+        .from("coach_memories")
+        .select("content,confidence,status,updated_at")
+        .eq("category", "pattern")
+        .in("status", ["candidate", "active", "established"])
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      setNoticing(data?.content || "");
+    } catch {
+      setNoticing("");
+    }
+  }
 
   async function buildMorning(force = false) {
     setLoading(true);
@@ -97,14 +120,14 @@ export default function MorningPage() {
             if (parsed?.message) {
               setMessage(parsed.message);
               setIdentityCoaching(parsed.identityCoaching || null);
+              setTodayOneThing(parsed.todayOneThing || "");
+              setNoticing(parsed.noticing || "");
               setLoading(false);
               return;
             }
           }
         } catch {}
 
-        // If today's plan already exists, load it rather than asking the AI
-        // to regenerate today's coaching simply because the user revisited.
         const [{ data: plan }, { data: identity }] = await Promise.all([
           supabase.from("daily_plans").select("items").eq("plan_date", today).maybeSingle(),
           supabase.from("identity_loops").select("identity_key,identity_title,why_today,adaptive_question").eq("loop_date", today).order("updated_at", { ascending: false }).limit(1).maybeSingle(),
@@ -120,9 +143,12 @@ export default function MorningPage() {
             commitmentPrompt: "What specific action will you use as today's proof?",
           } : null;
           const savedMessage = messageFromSavedPlan(plan.items, identity);
+          const oneThing = getTodayOneThing(plan.items);
           setMessage(savedMessage);
           setIdentityCoaching(savedIdentity);
-          try { localStorage.setItem(cacheKey, JSON.stringify({ message: savedMessage, identityCoaching: savedIdentity })); } catch {}
+          setTodayOneThing(oneThing);
+          await loadLatestPattern();
+          try { localStorage.setItem(cacheKey, JSON.stringify({ message: savedMessage, identityCoaching: savedIdentity, todayOneThing: oneThing })); } catch {}
           setLoading(false);
           return;
         }
@@ -136,9 +162,14 @@ export default function MorningPage() {
       const data = await response.json();
       if (data.setup) throw new Error("Live AI is not configured yet.");
       if (!response.ok || data.error) throw new Error(data.error || "Unable to build your morning plan.");
+      const oneThing = getTodayOneThing(data?.plan?.items || []);
+      const pattern = typeof data?.behavioralInsight === "string" ? data.behavioralInsight : "";
       setMessage(data.message || "");
       setIdentityCoaching(data.identityCoaching || null);
-      try { localStorage.setItem(cacheKey, JSON.stringify({ message: data.message || "", identityCoaching: data.identityCoaching || null })); } catch {}
+      setTodayOneThing(oneThing);
+      if (pattern) setNoticing(pattern);
+      else await loadLatestPattern();
+      try { localStorage.setItem(cacheKey, JSON.stringify({ message: data.message || "", identityCoaching: data.identityCoaching || null, todayOneThing: oneThing, noticing: pattern })); } catch {}
     } catch (e: any) {
       setError(e?.message || "Unable to build your morning plan.");
     } finally {
@@ -162,6 +193,23 @@ export default function MorningPage() {
       </header>
 
       <IdentityLoop coaching={identityCoaching} />
+
+      {!loading && !error && (
+        <>
+          <section style={{ ...focusCard, marginTop: 16 }}>
+            <div style={eyebrow}>TODAY'S ONE THING</div>
+            <h2 style={{ margin: "8px 0 8px", fontSize: 28, lineHeight: 1.15 }}>Make this the thing that matters.</h2>
+            <p style={{ margin: 0, fontSize: 18, lineHeight: 1.55 }}>{todayOneThing}</p>
+          </section>
+
+          {noticing && (
+            <section style={{ ...noticeCard, marginTop: 12 }}>
+              <div style={eyebrow}>WHAT I'M NOTICING</div>
+              <p style={{ margin: "8px 0 0", fontSize: 17, lineHeight: 1.55 }}>{noticing}</p>
+            </section>
+          )}
+        </>
+      )}
 
       <section style={{ ...card, marginTop: 16 }}>
         {loading ? (
@@ -213,5 +261,7 @@ export default function MorningPage() {
 
 const eyebrow = { fontSize: 12, fontWeight: 750, letterSpacing: 1.4, opacity: .55 };
 const card = { background: "white", borderRadius: 22, padding: 28, boxShadow: "0 8px 30px rgba(0,0,0,.06)" };
+const focusCard = { background: "#171717", color: "white", borderRadius: 22, padding: 28, boxShadow: "0 8px 30px rgba(0,0,0,.08)" };
+const noticeCard = { background: "#f5f3ef", borderRadius: 18, padding: "18px 20px", border: "1px solid #e5e1da" };
 const primaryButton = { display: "inline-block", border: 0, borderRadius: 10, padding: "11px 15px", background: "#171717", color: "white", cursor: "pointer" };
 const secondaryButton = { display: "inline-block", border: "1px solid #ddd", borderRadius: 10, padding: "10px 14px", background: "white", color: "#111", cursor: "pointer" };
