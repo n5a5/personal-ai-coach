@@ -99,9 +99,12 @@ export default function MorningPage() {
         .order("updated_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-      setNoticing(data?.content || "");
+      const content = data?.content || "";
+      setNoticing(content);
+      return content;
     } catch {
       setNoticing("");
+      return "";
     }
   }
 
@@ -144,11 +147,11 @@ export default function MorningPage() {
           } : null;
           const savedMessage = messageFromSavedPlan(plan.items, identity);
           const oneThing = getTodayOneThing(plan.items);
+          const latestPattern = await loadLatestPattern();
           setMessage(savedMessage);
           setIdentityCoaching(savedIdentity);
           setTodayOneThing(oneThing);
-          await loadLatestPattern();
-          try { localStorage.setItem(cacheKey, JSON.stringify({ message: savedMessage, identityCoaching: savedIdentity, todayOneThing: oneThing })); } catch {}
+          try { localStorage.setItem(cacheKey, JSON.stringify({ message: savedMessage, identityCoaching: savedIdentity, todayOneThing: oneThing, noticing: latestPattern })); } catch {}
           setLoading(false);
           return;
         }
@@ -164,12 +167,12 @@ export default function MorningPage() {
       if (!response.ok || data.error) throw new Error(data.error || "Unable to build your morning plan.");
       const oneThing = getTodayOneThing(data?.plan?.items || []);
       const pattern = typeof data?.behavioralInsight === "string" ? data.behavioralInsight : "";
+      const latestPattern = pattern || await loadLatestPattern();
       setMessage(data.message || "");
       setIdentityCoaching(data.identityCoaching || null);
       setTodayOneThing(oneThing);
-      if (pattern) setNoticing(pattern);
-      else await loadLatestPattern();
-      try { localStorage.setItem(cacheKey, JSON.stringify({ message: data.message || "", identityCoaching: data.identityCoaching || null, todayOneThing: oneThing, noticing: pattern })); } catch {}
+      setNoticing(latestPattern);
+      try { localStorage.setItem(cacheKey, JSON.stringify({ message: data.message || "", identityCoaching: data.identityCoaching || null, todayOneThing: oneThing, noticing: latestPattern })); } catch {}
     } catch (e: any) {
       setError(e?.message || "Unable to build your morning plan.");
     } finally {
