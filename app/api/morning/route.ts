@@ -6,6 +6,8 @@ The user wants to keep a three-time written affirmation exercise. Do not remove 
 
 Choose the identity with the highest leverage TODAY. Prefer one of these core identities: discipline, composure, builder, connection, presence, health. You may make the title more specific while keeping one of those keys.
 
+IMPORTANT DAILY-VARIETY RULE: The identity should normally change from day to day. Strongly avoid repeating an identity used in the previous day, and avoid identities used in the last 2-3 days when another identity is reasonably relevant. Do NOT use an artificial fixed rotation. Repeat a recent identity only when the user's current evidence clearly makes it the highest-leverage focus; if you repeat it, the WHY_TODAY must explicitly explain why the repetition is warranted. A technical failure must never silently default to discipline.
+
 IDENTITY_TITLE MUST be a complete, natural first-person identity statement. Never end it with an unfinished connector such as "by", "when", "because", "so that", or "to". For example, prefer "I make movement automatic." rather than "I make movement automatic by".
 
 Return exactly six single-line fields and nothing else:
@@ -82,33 +84,52 @@ function completionSummary(plans: any[]) {
   });
 }
 
-function parseIdentity(text: string) {
-  const get = (key: string) => text.match(new RegExp(`^${key}:\\s*(.+)$`, "im"))?.[1]?.trim() || "";
-  const identityKey = get("IDENTITY_KEY");
-  const allowed = ["discipline", "composure", "builder", "connection", "presence", "health"];
-  const rawTitle = get("IDENTITY_TITLE") || "I am disciplined.";
-  const title = rawTitle.replace(/\\s+(by|when|because|so that|to)\\s*$/i, "").trim();
-  return {
-    key: allowed.includes(identityKey) ? identityKey : "discipline",
-    title: title.endsWith(".") ? title : `${title}.`,
-    prompt: get("IDENTITY_PROMPT") || "I do what I say I'm going to do, especially when I don't feel like it.",
-    whyToday: get("WHY_TODAY") || "Use today to create one small piece of evidence for the person you are becoming.",
-    question: get("QUESTION") || "Where would following through matter most today?",
-    commitmentPrompt: get("COMMITMENT_PROMPT") || "What specific action will you use as today's proof?",
-  };
+const CORE_IDENTITIES = ["discipline", "composure", "builder", "connection", "presence", "health"];
+
+const FALLBACK_IDENTITIES: Record<string, { title: string; prompt: string; whyToday: string; question: string }> = {
+  discipline: { title: "I am disciplined.", prompt: "I do what I say I'm going to do, especially when I don't feel like it.", whyToday: "Use today to create one small piece of evidence for the person you are becoming.", question: "Where would following through matter most today?" },
+  composure: { title: "I am composed.", prompt: "I can feel pressure without letting it decide how I respond.", whyToday: "Today, practice responding deliberately instead of letting urgency choose your next move.", question: "Where would a calmer response change the outcome today?" },
+  builder: { title: "I am a builder.", prompt: "I turn important intentions into concrete progress.", whyToday: "Use today to create something tangible that moves your life forward.", question: "What would be meaningfully better if you moved it forward today?" },
+  connection: { title: "I am connected.", prompt: "I give the people I love my attention, warmth, and presence.", whyToday: "Use today to create one moment of genuine connection rather than letting the day run on autopilot.", question: "Who would benefit most from your full attention today?" },
+  presence: { title: "I am present.", prompt: "I notice and appreciate what is happening instead of constantly rushing toward what comes next.", whyToday: "Today's value is not only in what you accomplish; notice something good while it is actually happening.", question: "What ordinary part of today is worth actually experiencing?" },
+  health: { title: "I protect my health.", prompt: "I make choices that support the body and mind I want to live in.", whyToday: "Use today to make one concrete choice that supports your long-term health and energy.", question: "What health choice would make the rest of today easier?" },
+};
+
+function fallbackIdentity(recentKeys: string[]) {
+  const recent = new Set(recentKeys);
+  const key = CORE_IDENTITIES.find(candidate => !recent.has(candidate)) || CORE_IDENTITIES.find(candidate => candidate !== recentKeys[0]) || "discipline";
+  const item = FALLBACK_IDENTITIES[key];
+  return { key, title: item.title, prompt: item.prompt, whyToday: item.whyToday, question: item.question, commitmentPrompt: "What specific action will you use as today's proof?" };
 }
 
-async function generateIdentityCoaching(context: string) {
+function parseIdentity(text: string, recentKeys: string[] = []) {
+  const get = (key: string) => text.match(new RegExp(`^${key}:\\s*(.+)$`, "im"))?.[1]?.trim() || "";
+  const identityKey = get("IDENTITY_KEY");
+  const rawTitle = get("IDENTITY_TITLE");
+  const title = rawTitle ? rawTitle.replace(/\\s+(by|when|because|so that|to)\\s*$/i, "").trim() : "";
+  const generated = identityKey && CORE_IDENTITIES.includes(identityKey) && title ? {
+    key: identityKey,
+    title: title.endsWith(".") ? title : `${title}.`,
+    prompt: get("IDENTITY_PROMPT") || FALLBACK_IDENTITIES[identityKey].prompt,
+    whyToday: get("WHY_TODAY") || FALLBACK_IDENTITIES[identityKey].whyToday,
+    question: get("QUESTION") || FALLBACK_IDENTITIES[identityKey].question,
+    commitmentPrompt: get("COMMITMENT_PROMPT") || "What specific action will you use as today's proof?",
+  } : null;
+  if (generated && (!recentKeys.includes(generated.key) || recentKeys.length === 0)) return generated;
+  return fallbackIdentity(recentKeys);
+}
+
+async function generateIdentityCoaching(context: string, recentKeys: string[]) {
   try {
     const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${process.env.OPENAI_API_KEY}` },
-      body: JSON.stringify({ model: process.env.OPENAI_MODEL || "gpt-5.6", instructions: IDENTITY_SYSTEM, input: [{ role: "user", content: "Choose today's adaptive identity focus from this persistent coaching context:\n" + context }], max_output_tokens: 300 }),
+      body: JSON.stringify({ model: process.env.OPENAI_MODEL || "gpt-5.6", instructions: IDENTITY_SYSTEM, input: [{ role: "user", content: "Choose today's adaptive identity focus from this persistent coaching context. Recent identity keys are listed separately. Avoid the most recent key unless the evidence clearly requires repetition.\nRECENT_IDENTITY_KEYS: " + JSON.stringify(recentKeys) + "\nCONTEXT:\n" + context }], max_output_tokens: 300 }),
     });
-    if (!response.ok) return parseIdentity("");
-    return parseIdentity(extractText(await response.json().catch(() => ({}))));
+    if (!response.ok) return fallbackIdentity(recentKeys);
+    return parseIdentity(extractText(await response.json().catch(() => ({}))), recentKeys);
   } catch {
-    return parseIdentity("");
+    return fallbackIdentity(recentKeys);
   }
 }
 
@@ -153,16 +174,21 @@ export async function POST(request: Request) {
     const behavioralInsight = await generateBehavioralInsight(context);
 
     // Once today's identity exists, keep it stable. Reopening Morning should not silently change the affirmation.
+    const priorIdentityKeys = (identityLoops || [])
+      .filter((loop: any) => loop?.loop_date && loop.loop_date !== today && CORE_IDENTITIES.includes(loop.identity_key))
+      .slice(0, 3)
+      .map((loop: any) => loop.identity_key);
+
     const identityCoaching = todayIdentity
       ? {
           key: todayIdentity.identity_key,
           title: todayIdentity.identity_title,
-          prompt: todayIdentity.identity_prompt || "I do what I say I'm going to do, especially when I don't feel like it.",
-          whyToday: todayIdentity.why_today || "Use today to create one small piece of evidence for the person you are becoming.",
-          question: todayIdentity.adaptive_question || "Where would following through matter most today?",
+          prompt: todayIdentity.identity_prompt || FALLBACK_IDENTITIES[todayIdentity.identity_key]?.prompt || "I do what I say I'm going to do, especially when I don't feel like it.",
+          whyToday: todayIdentity.why_today || FALLBACK_IDENTITIES[todayIdentity.identity_key]?.whyToday || "Use today to create one small piece of evidence for the person you are becoming.",
+          question: todayIdentity.adaptive_question || FALLBACK_IDENTITIES[todayIdentity.identity_key]?.question || "Where would following through matter most today?",
           commitmentPrompt: "What specific action will you use as today's proof?",
         }
-      : await generateIdentityCoaching(JSON.stringify({ ...contextData, latest_behavioral_insight: behavioralInsight || null }));
+      : await generateIdentityCoaching(JSON.stringify({ ...contextData, latest_behavioral_insight: behavioralInsight || null }), priorIdentityKeys);
 
     if (behavioralInsight) {
       await supabase.from("coach_memories").delete().eq("user_id", user.id).eq("category", "behavioral_insight").eq("source", "evening-reflection");
